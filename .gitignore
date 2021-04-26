@@ -30,3 +30,13 @@
 *.exe
 *.out
 *.app
+
+# CMake
+cmake-build-*/
+out/
+
+# Visual Studio cache/options directory
+.vs/
+
+# JetBrains
+.idea/
