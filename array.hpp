@@ -7,6 +7,7 @@ namespace std
 }
 
 #include "util.hpp"
+#include "optional.hpp"
 #include "iterator.hpp"
 #include "container.hpp"
 #include "object.hpp"
@@ -434,6 +435,13 @@ template<class T, size_t N> struct array<T, N>
         return (*this)[pos];
     }
 
+    type_if<optional<T>, !is_const_v<T>> put(size_type pos, const_reference value) {
+        arrays::_check_range<size_type, N>(pos);
+        optional<T> res = value;
+        objects::swap_bytes((*this)[pos], *res);
+        return res;
+    }
+
     _NODISCARD constexpr reference front() noexcept { return m_elems[0]; }
 
     _NODISCARD constexpr const_reference front() const noexcept { return m_elems[0]; }
@@ -740,6 +748,13 @@ template<class T> struct array<T>
     _NODISCARD const_reference at(size_type pos) const {
         arrays::_check_range<size_type>(pos, size());
         return (*this)[pos];
+    }
+
+    type_if<optional<T>, !is_const_v<T>> put(size_type pos, const_reference value) {
+        arrays::_check_range<size_type>(pos, size());
+        optional<T> res = value;
+        objects::swap_bytes((*this)[pos], res.value());
+        return res;
     }
 
     _NODISCARD reference front() noexcept { return m_elems[0]; }
