@@ -1,5 +1,8 @@
 ﻿#include "CMakeProject1.h"
 #include "util.hpp"
+#include "comporator.hpp"
+#include "array.hpp"
+#include "tree_node.hpp"
 
 
 struct CMakeProject1
@@ -50,16 +53,50 @@ constexpr bool is_zero(int i) noexcept
 	return i == 0;
 }
 
+class MyClass
+{
+public:
+	MyClass()
+	{
+		std::cout << "MyClass was constructed\n";
+	}
+
+	~MyClass()
+	{
+		std::cout << "MyClass was destructed\n";
+	}
+
+private:
+	int i;
+};
 
 int main()
 {
 	int fdf = 4;
 
-	//array<CMakeProject1, 6> d;
-
 	auto sdfsd = [&fdf](int dd) { return fdf += dd; };
 
 	int dsd = sizeof sdfsd;
+
+	{
+		array<MyClass> cc(5);
+
+		std::cout << "\ntest\n";
+	}
+
+	array<int, 2, 2, 2, 2> a{};
+	array<int, 2, 2, 2>& i1 = a.at(0);
+	array<int, 2, 2>& i2 = a.at(0, 0);
+	array<int, 2>& i3 = a.at(0, 0, 0);
+	int& i4 = a.at(0, 0, 0, 0);
+
+	array<int volatile, 1> efsfasf;
+
+	array<int volatile, 1> hdfgdfhts;
+
+	hdfgdfhts = efsfasf;
+
+	efsfasf.assign(5);
 
 	CMakeProject1 m[]{ CMakeProject1(5) };
 
@@ -78,6 +115,50 @@ int main()
 	(float&)m0_sum_res = 4.f;
 
 	println(m[0]._sum_res);
+
+	array<CMakeProject1, 1> r = m;
+
+	array<float, 3> f(1, 22, 4);
+
+	float sf = 0;
+	f.foreach(m0_sum, sf);
+
+	std::cout << std::endl;
+	std::cout << std::endl;
+	std::cout << "f";
+	std::cout << std::endl;
+
+	std::cout << sf << std::endl
+		<< f.size() << std::endl
+		<< f[0] << std::endl
+		<< f[1] << std::endl
+		<< f[2] << std::endl;
+
+	constexpr size_t arr_s = arrays::size<array<int, 5>>;
+
+	tree_node<int, comporator<>> treenode(nullptr, 5);
+
+	constexpr bool c222 = convertible_v<iterator<int const*>, iterator<int*>>;
+	constexpr bool c333 = convertible_v<iterator<int*>, iterator<int const*>>;
+
+	//constexpr bool c22 = objects::is_ordering_v<std::strong_ordering>;
+
+	treenode.insert(1);
+	treenode.insert(2);
+	treenode.insert(3);
+	treenode.insert(4);
+	treenode.insert(5);
+	treenode.insert(5);
+	treenode.insert(6);
+	treenode.insert(7);
+	treenode.insert(8);
+	auto f9t = treenode.insert(9);
+
+	tree_node<int, comporator<>>::remove(f9t.first);
+
+	treenode.find(4);
+
+	treenode.foreach(println);
 
 	return 0;
 }

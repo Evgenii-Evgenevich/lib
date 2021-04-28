@@ -10,8 +10,7 @@ protected:
 	{
 		template<class F, class... Args> constexpr auto operator()(F&& f, Args&&... args)
 			noexcept(noexcept(static_cast<F&&>(f)(static_cast<Args&&>(args)...)))
-			-> decltype(static_cast<F&&>(f)(static_cast<Args&&>(args)...))
-		{
+			-> decltype(static_cast<F&&>(f)(static_cast<Args&&>(args)...)) {
 			return static_cast<F&&>(f)(static_cast<Args&&>(args)...);
 		}
 	};

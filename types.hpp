@@ -32,7 +32,7 @@ template<bool _Const, bool... _Consts> constexpr _INLINE_VAR bool all_const = _C
 template<bool _Const> constexpr _INLINE_VAR bool all_const<_Const> = _Const;
 
 template<bool _Const, bool... _Consts>
-using conjunction_type = std::integral_constant<bool, all_const<_Const, _Consts...>>;
+struct conjunction_type : std::integral_constant<bool, all_const<_Const, _Consts...>> {};
 
 template<class...> struct sfinae : std::true_type {};
 
@@ -42,10 +42,6 @@ template<class T> struct sfinae<T> : std::true_type
 };
 
 template<class, class...> constexpr _INLINE_VAR bool sfinae_v = true;
-
-template<class, class T = void> using sfinae_t = T;
-
-template<class T, class, class...> using type_if_sfinae = T;
 
 template<class T, bool _Const, bool... _Consts> using type_if = typename std::enable_if<all_const<_Const, _Consts...>, T>::type;
 
