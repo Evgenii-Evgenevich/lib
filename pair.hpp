@@ -62,6 +62,8 @@ template<class T> struct pair<T, T>
 
 	constexpr void swap(pair& o) noexcept { util::swap_bytes(*this, o); }
 
+	constexpr size_t size() const noexcept { return 2; }
+
 	constexpr T* data() noexcept { return (T*)this; }
 	constexpr T const* data() const noexcept { return (T const*)this; }
 
@@ -155,14 +157,12 @@ pair(First, Second)->pair<First, Second>;
 #endif // _HAS_CXX17
 
 template<class LFirst, class LSecond, class RFirst, class RSecond, class = decltype(std::declval<LFirst>() == std::declval<RFirst>()), class = decltype(std::declval<LSecond>() == std::declval<RSecond>())>
-constexpr bool operator==(pair<LFirst, LSecond> const& _Left, pair<RFirst, RSecond> const& _Right) noexcept
-{
+constexpr bool operator==(pair<LFirst, LSecond> const& _Left, pair<RFirst, RSecond> const& _Right) noexcept {
 	return _Left.first == _Right.first && _Left.second == _Right.second;
 }
 
 template<class LFirst, class LSecond, class RFirst, class RSecond, class = decltype(std::declval<LFirst>() != std::declval<RFirst>()), class = decltype(std::declval<LSecond>() != std::declval<RSecond>())>
-constexpr bool operator!=(pair<LFirst, LSecond> const& _Left, pair<RFirst, RSecond> const& _Right) noexcept
-{
+constexpr bool operator!=(pair<LFirst, LSecond> const& _Left, pair<RFirst, RSecond> const& _Right) noexcept {
 	return _Left.first != _Right.first || _Left.second != _Right.second;
 }
 

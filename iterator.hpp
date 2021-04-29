@@ -280,14 +280,14 @@ template<class T> struct reverse_iterator<T*>
 	constexpr pointer operator->() noexcept { return cur; }
 	constexpr const_pointer operator->() const noexcept { return cur; }
 
-	constexpr reverse_iterator operator++(int) const noexcept { reverse_iterator temp = cur; ++cur; return temp; }
-	constexpr reverse_iterator operator--(int) const noexcept { reverse_iterator temp = cur; --cur; return temp; }
+	constexpr reverse_iterator operator++(int) const noexcept { reverse_iterator temp = cur; --cur; return temp; }
+	constexpr reverse_iterator operator--(int) const noexcept { reverse_iterator temp = cur; ++cur; return temp; }
 
-	constexpr reverse_iterator operator+(difference_type dif) const noexcept { return cur + dif; }
-	constexpr reverse_iterator operator-(difference_type dif) const noexcept { return cur - dif; }
+	constexpr reverse_iterator operator+(difference_type dif) const noexcept { return cur - dif; }
+	constexpr reverse_iterator operator-(difference_type dif) const noexcept { return cur + dif; }
 
-	constexpr reverse_iterator& operator++() noexcept { ++cur; return *this; }
-	constexpr reverse_iterator& operator--() noexcept { --cur; return *this; }
+	constexpr reverse_iterator& operator++() noexcept { --cur; return *this; }
+	constexpr reverse_iterator& operator--() noexcept { ++cur; return *this; }
 
 	constexpr reverse_iterator& operator+=(difference_type dif) noexcept { cur += dif; return *this; }
 	constexpr reverse_iterator& operator-=(difference_type dif) noexcept { cur -= dif; return *this; }
