@@ -289,8 +289,8 @@ template<class T> struct reverse_iterator<T*>
 	constexpr reverse_iterator& operator++() noexcept { --cur; return *this; }
 	constexpr reverse_iterator& operator--() noexcept { ++cur; return *this; }
 
-	constexpr reverse_iterator& operator+=(difference_type dif) noexcept { cur += dif; return *this; }
-	constexpr reverse_iterator& operator-=(difference_type dif) noexcept { cur -= dif; return *this; }
+	constexpr reverse_iterator& operator+=(difference_type dif) noexcept { cur -= dif; return *this; }
+	constexpr reverse_iterator& operator-=(difference_type dif) noexcept { cur += dif; return *this; }
 
 	template<class U> constexpr auto operator-(reverse_iterator<U*> const& other) const noexcept
 		-> type_if<difference_type, convertible_v<decltype(cur - other.cur), difference_type>> {

@@ -15,7 +15,9 @@ namespace std
 
 template<class T, class Comparator, class Derived> struct tree_node;
 
-template<class Derived> struct tree_node<void, void, Derived>
+template<> struct tree_node<void, void, void> {};
+
+template<class Derived> struct tree_node<void, void, Derived> : tree_node<void, void, void>
 {
 	using nodeptr = Derived*;
 	using const_nodeptr = Derived const*;

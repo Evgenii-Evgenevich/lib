@@ -3,6 +3,8 @@
 #include "comporator.hpp"
 #include "array.hpp"
 #include "tree_node.hpp"
+#include "singly_linked_node.hpp"
+#include "front_linked_list.hpp"
 
 
 struct CMakeProject1
@@ -154,11 +156,13 @@ int main()
 	treenode.insert(8);
 	auto f9t = treenode.insert(9);
 
-	tree_node<int, comporator<>>::remove(f9t.first);
+	decltype(treenode)::remove(f9t.first);
 
 	treenode.find(4);
 
 	treenode.foreach(println);
+
+	front_linked_list<int> fll;
 
 	return 0;
 }
