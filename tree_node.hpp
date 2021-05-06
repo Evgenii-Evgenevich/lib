@@ -15,10 +15,85 @@ namespace std
 
 template<class T, class Comparator, class Derived> struct tree_node;
 
-template<> struct tree_node<void, void, void> {};
+template<> struct tree_node<void, void, void>
+{
+	template<class Nodeptr> static auto minimum(Nodeptr minimum) noexcept
+		-> type_if<Nodeptr, convertible_v<decltype(minimum->left()), Nodeptr>, convertible_v<decltype(minimum == nullptr), bool>, convertible_v<nullptr_t, Nodeptr>, convertible_v<decltype(minimum->left() != nullptr), bool>>
+	{
+		if (minimum == nullptr)
+			return nullptr;
+		while (minimum->left() != nullptr) {
+			minimum = minimum->left();
+		}
+		return minimum;
+	}
+
+	template<class Nodeptr> static auto maximum(Nodeptr maximum) noexcept
+		-> type_if<Nodeptr, convertible_v<decltype(maximum->right()), Nodeptr>, convertible_v<decltype(maximum == nullptr), bool>, convertible_v<nullptr_t, Nodeptr>, convertible_v<decltype(maximum->right() != nullptr), bool>>
+	{
+		if (maximum == nullptr)
+			return nullptr;
+		while (maximum->right() != nullptr) {
+			maximum = maximum->right();
+		}
+		return maximum;
+	}
+
+	template<class Nodeptr> static Nodeptr _leftrotate(Nodeptr _this) noexcept
+	{
+		Nodeptr node = _this->m_right;
+		if (node == nullptr)
+			return nullptr;
+
+		if (node->m_left) {
+			_this->m_right = node->m_left;
+			_this->m_right->m_parent = _this;
+		} else {
+			_this->m_right = nullptr;
+		}
+
+		if (_this->m_parent) _this->_subling() = node;
+		node->m_parent = _this->m_parent;
+		_this->m_parent = node;
+		node->m_left = _this;
+		return node;
+	}
+
+	template<class Nodeptr> static Nodeptr _rightrotate(Nodeptr _this) noexcept
+	{
+		Nodeptr node = _this->m_left;
+		if (node == nullptr)
+			return nullptr;
+
+		if (node->m_right) {
+			_this->m_left = node->m_right;
+			_this->m_left->m_parent = _this;
+		} else {
+			_this->m_left = nullptr;
+		}
+
+		if (_this->m_parent) _this->_subling() = node;
+		node->m_parent = _this->m_parent;
+		_this->m_parent = node;
+		node->m_right = _this;
+		return node;
+	}
+
+protected:
+	tree_node() = default;
+
+	tree_node(tree_node const&) = delete;
+	tree_node& operator=(tree_node const&) = delete;
+
+	tree_node(tree_node&&) = delete;
+	tree_node& operator=(tree_node&&) = delete;
+
+};
 
 template<class Derived> struct tree_node<void, void, Derived> : tree_node<void, void, void>
 {
+	using _base = tree_node<void, void, void>;
+
 	using nodeptr = Derived*;
 	using const_nodeptr = Derived const*;
 
@@ -26,28 +101,21 @@ template<class Derived> struct tree_node<void, void, Derived> : tree_node<void, 
 		: m_parent(parent), m_left(nullptr), m_right(nullptr) {
 	}
 
-	~tree_node() noexcept
-	{
-		if (m_right)
-		{
+	~tree_node() noexcept {
+		if (m_right) {
 			m_right->m_parent = nullptr;
 			delete m_right;
 			m_right = nullptr;
 		}
-		if (m_left)
-		{
+		if (m_left) {
 			m_left->m_parent = nullptr;
 			delete m_left;
 			m_left = nullptr;
 		}
-		if (m_parent)
-		{
-			if (m_parent->m_left == this)
-			{
+		if (m_parent) {
+			if (m_parent->m_left == this) {
 				m_parent->m_left = nullptr;
-			}
-			else if (m_parent->m_right == this)
-			{
+			} else if (m_parent->m_right == this) {
 				m_parent->m_right = nullptr;
 			}
 		}
@@ -65,102 +133,27 @@ template<class Derived> struct tree_node<void, void, Derived> : tree_node<void, 
 
 	constexpr const_nodeptr right() const noexcept { return m_right; }
 
-	static nodeptr minimum(nodeptr minimum) noexcept
-	{
-		if (minimum == nullptr)
-			return nullptr;
-		while (minimum->left() != nullptr)
-		{
-			minimum = minimum->left();
-		}
-		return minimum;
-	}
-
-	static nodeptr maximum(nodeptr maximum) noexcept
-	{
-		if (maximum == nullptr)
-			return nullptr;
-		while (maximum->right() != nullptr)
-		{
-			maximum = maximum->right();
-		}
-		return maximum;
-	}
-
-	static nodeptr _leftrotate(nodeptr _this) noexcept
-	{
-		nodeptr node = _this->m_right;
-		if (node == nullptr)
-			return nullptr;
-
-		if (node->m_left)
-		{
-			_this->m_right = node->m_left;
-			_this->m_right->m_parent = _this;
-		}
-		else
-		{
-			_this->m_right = nullptr;
-		}
-
-		if (_this->m_parent) _this->_subling() = node;
-		node->m_parent = _this->m_parent;
-		_this->m_parent = node;
-		node->m_left = _this;
-		return node;
-	}
-
-	static nodeptr _rightrotate(nodeptr _this) noexcept
-	{
-		nodeptr node = _this->m_left;
-		if (node == nullptr)
-			return nullptr;
-
-		if (node->m_right)
-		{
-			_this->m_left = node->m_right;
-			_this->m_left->m_parent = _this;
-		}
-		else
-		{
-			_this->m_left = nullptr;
-		}
-
-		if (_this->m_parent) _this->_subling() = node;
-		node->m_parent = _this->m_parent;
-		_this->m_parent = node;
-		node->m_right = _this;
-		return node;
-	}
-
-	static pair<std::unique_ptr<Derived>, int> remove(Derived* node) noexcept
-	{
+	static pair<std::unique_ptr<Derived>, int> remove(Derived* node) noexcept {
 		if (node == nullptr)
 			return { std::unique_ptr<Derived>(), 0 };
 
 		using T = typename Derived::value_type;
 
-		if (nodeptr successor = node->m_right)
-		{
-			successor = minimum(successor);
+		if (nodeptr successor = node->m_right) {
+			successor = _base::minimum(successor);
 			objects::swap_bytes(static_cast<T&>(*node), static_cast<T&>(*successor));
 			return remove(successor);
 		}
-		if (nodeptr predeccessor = node->m_left)
-		{
-			predeccessor = maximum(predeccessor);
+		if (nodeptr predeccessor = node->m_left) {
+			predeccessor = _base::maximum(predeccessor);
 			objects::swap_bytes(static_cast<T&>(*node), static_cast<T&>(*predeccessor));
 			return remove(predeccessor);
 		}
-		if (nodeptr parent = node->m_parent)
-		{
-			if (parent->m_left == node)
-			{
+		if (nodeptr parent = node->m_parent) {
+			if (parent->m_left == node) {
 				parent->m_left = nullptr;
 				return { std::unique_ptr<Derived>(node), -1 };
-			}
-			else
-			{
+			} else {
 				parent->m_right = nullptr;
 				return { std::unique_ptr<Derived>(node), 1 };
 			}

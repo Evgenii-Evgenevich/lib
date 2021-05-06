@@ -197,7 +197,7 @@ struct front_linked_list
             return end();
 
         node* after = const_cast<node*>(pos.cur);
-        after->unlink_next();
+        this->_remove_after(after);
         return after->next();
     }
 
@@ -241,7 +241,7 @@ struct front_linked_list
     }
 
     std::unique_ptr<node> pop_front() noexcept {
-        return m_before_first.unlink_next();
+        return this->_remove_after(&m_before_first);
     }
 
     std::unique_ptr<node> remove_after(const_iterator pos) noexcept {
@@ -313,7 +313,7 @@ protected:
     }
 
     constexpr std::unique_ptr<node> _remove_after(node* after) {
-        return after->unlink_next();
+        return node::unlink_next(after);
     }
 
     struct _insert_after {

@@ -13,10 +13,70 @@ namespace std
 
 template<class T, class Derived> struct singly_linked_node;
 
-template<> struct singly_linked_node<void, void> {};
-
-template<class Derived> struct singly_linked_node<void, Derived> : singly_linked_node<void, void>
+template<> struct singly_linked_node<void, void>
 {
+	template<class Node> constexpr static auto unlink_next(Node* node) noexcept -> decltype(node->unlink_next()) {
+		return node->unlink_next();
+	}
+
+	template<class Node, class Pred, class... Args>
+	inline static auto _remove_if(Node* prev, Pred&& pred, Args&&... args) noexcept(util::nothrow_invocable_v<Pred, decltype(null<Node const>->value()), Args...>)
+		-> type_if<size_t, convertible_v<decltype(prev->next()), Node*>, convertible_v<util::invoke_result_t<Pred, decltype(null<Node const>->value()), Args...>, bool>, sfinae_v<decltype(prev->unlink_next())>>
+	{
+		size_t removed = 0;
+		for (Node* i = prev->next(); i != nullptr; ) {
+			if (util::invoke(static_cast<Pred&&>(pred), i->value(), static_cast<Args&&>(args)...)) {
+				prev->unlink_next();
+				i = prev->next();
+				++removed;
+			} else {
+				prev = i;
+				i = prev->next();
+			}
+		}
+		return removed;
+	}
+
+	template<class Node, class Pred, class... Args>
+	_NODISCARD inline static auto _find_if(Node const* node, Pred&& pred, Args&&... args) noexcept(util::nothrow_invocable_v<Pred, decltype(node->value()), Args...>)
+		-> type_if<Node*, convertible_v<decltype(node->next()), Node const*>, convertible_v<util::invoke_result_t<Pred, decltype(node->value()), Args...>, bool>>
+	{
+		for (; node != nullptr; node = node->next()) {
+			if (util::invoke(static_cast<Pred&&>(pred), node->value(), static_cast<Args&&>(args)...)) {
+				return const_cast<Node*>(node);
+			}
+		}
+		return nullptr;
+	}
+
+	template<class Node, class Pred, class... Args>
+	_NODISCARD inline static auto _find_next_returning_prev(/*notnull*/ Node const* prev, Pred&& pred, Args&&... args) noexcept(util::nothrow_invocable_v<Pred, decltype(prev->value()), Args...>)
+		-> type_if<Node*, convertible_v<decltype(prev->next()), Node const*>, convertible_v<util::invoke_result_t<Pred, decltype(prev->value()), Args...>, bool>>
+	{
+		for (Node const* node = prev->next(); node != nullptr; prev = node, node = node->next()) {
+			if (util::invoke(static_cast<Pred&&>(pred), node->value(), static_cast<Args&&>(args)...)) {
+				return const_cast<Node*>(prev);
+			}
+		}
+		return nullptr;
+	}
+
+protected:
+	singly_linked_node() = default;
+
+	singly_linked_node(singly_linked_node const&) = delete;
+	singly_linked_node& operator=(singly_linked_node const&) = delete;
+
+	singly_linked_node(singly_linked_node&&) = delete;
+	singly_linked_node& operator=(singly_linked_node&&) = delete;
+
+};
+
+template<class Derived> struct singly_linked_node<void, Derived> :
+	protected singly_linked_node<void, void>
+{
+	using _base = singly_linked_node<void, void>;
+
 	using nodeptr = Derived*;
 	using const_nodeptr = Derived const*;
 
@@ -30,16 +90,14 @@ template<class Derived> struct singly_linked_node<void, Derived> : singly_linked
 		return next;
 	}
 
-	static std::unique_ptr<Derived> unlink_next(nodeptr node) noexcept {
-		return node->unlink_next();
-	}
-
 	std::unique_ptr<Derived> unlink_next() noexcept {
 		nodeptr next = m_next;
 		if (next == nullptr) return nullptr;
 		m_next = next->take_next();
 		return std::unique_ptr<Derived>(next);
 	}
+
+	using _base::unlink_next;
 
 	template<class... Args>
 	type_if<nodeptr, is_constructible_v<Derived, nodeptr, Args...>> _new_next(Args&&... args) {
@@ -50,38 +108,13 @@ template<class Derived> struct singly_linked_node<void, Derived> : singly_linked
 	void _reverse() noexcept {
 		nodeptr cur = m_next;
 		if (cur == nullptr) return;
-		for (nodeptr prev{}, next{}; ; prev = cur, (void)cur = next)
-		{
+		for (nodeptr prev{}, next{}; ; prev = cur, (void)cur = next) {
 			next = std::exchange(cur->m_next, prev);
-			if (next == nullptr)
-			{
+			if (next == nullptr) {
 				m_next = cur;
 				return;
 			}
 		}
-	}
-
-	template<class Pred, class... Args, class V = decltype(std::declval<const_nodeptr>()->value())>
-	static type_if<size_t, convertible_v<util::invoke_result_t<Pred, V, Args...>, bool>>
-		_remove_if(nodeptr prev, Pred&& pred, Args&&... args) noexcept(util::nothrow_invocable_v<Pred, V, Args...>)
-	{
-		size_t removed = 0;
-		for (nodeptr i = prev->next(); i != nullptr; )
-		{
-			V value = i->value();
-			if (util::invoke(static_cast<Pred&&>(pred), value, static_cast<Args&&>(args)...))
-			{
-				prev->unlink_next();
-				i = prev->next();
-				++removed;
-			}
-			else
-			{
-				prev = i;
-				i = prev->next();
-			}
-		}
-		return removed;
 	}
 
 	~singly_linked_node() noexcept {
@@ -89,58 +122,42 @@ template<class Derived> struct singly_linked_node<void, Derived> : singly_linked
 		m_next = nullptr;
 	}
 
-	template<class Pred, class... Args, class V = decltype(std::declval<const_nodeptr>()->value())>
-	_NODISCARD static type_if<nodeptr, convertible_v<util::invoke_result_t<Pred, V, Args...>, bool>>
-		_find_next_returning_prev(/*notnull*/ const_nodeptr prev, Pred&& pred, Args&&... args) noexcept(util::nothrow_invocable_v<Pred, V, Args...>)
-	{
-		for (const_nodeptr node = prev->next(); node != nullptr; prev = node, node = node->next())
-		{
-			if (util::invoke(static_cast<Pred&&>(pred), node->value(), static_cast<Args&&>(args)...))
-			{
-				return const_cast<nodeptr>(prev);
-			}
-		}
-		return nullptr;
+	template<class Pred = std::function<bool(decltype(null<Derived const>->value()))>>
+	static auto remove_all_next_if(nodeptr node, Pred&& pred)
+		-> decltype(_base::_remove_if(node, static_cast<Pred&&>(pred))) {
+		return _base::_remove_if(node, static_cast<Pred&&>(pred));
 	}
 
-	template<class Pred, class... Args, class V = decltype(std::declval<const_nodeptr>()->value())>
-	_NODISCARD static type_if<nodeptr, convertible_v<util::invoke_result_t<Pred, V, Args...>, bool>>
-		_find_if(const_nodeptr node, Pred&& pred, Args&&... args) noexcept(util::nothrow_invocable_v<Pred, V, Args...>)
-	{
-		for (; node != nullptr; node = node->next())
-		{
-			if (util::invoke(static_cast<Pred&&>(pred), node->value(), static_cast<Args&&>(args)...))
-			{
-				return const_cast<nodeptr>(node);
-			}
-		}
-		return nullptr;
+	template<class... Args, class Pred = std::function<bool(decltype(null<Derived const>->value()), Args...)>>
+	static auto remove_all_next_if(nodeptr node, Pred&& pred, Args&&... args)
+		-> decltype(_base::_remove_if(node, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...)) {
+		return _base::_remove_if(node, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
 	}
 
-	template<class... Args, class Pred = std::function<bool(decltype(std::declval<const_nodeptr>()->value()), Args...)>>
-	_NODISCARD static auto find_if(const_nodeptr node, Pred&& pred, Args&&... args) noexcept(noexcept(_find_if(node, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...)))
-		-> decltype(_find_if(node, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...)) {
-		return _find_if(node, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
+	template<class... Args, class Pred = std::function<bool(decltype(null<Derived const>->value()), Args...)>>
+	_NODISCARD static auto find_if(const_nodeptr node, Pred&& pred, Args&&... args) noexcept(noexcept(_base::_find_if(node, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...)))
+		-> decltype(_base::_find_if(node, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...)) {
+		return _base::_find_if(node, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
 	}
 
-	template<class Pred = std::function<bool(decltype(std::declval<const_nodeptr>()->value()))>>
-	_NODISCARD static auto find_if(const_nodeptr node, Pred&& pred) noexcept(noexcept(_find_if(node, static_cast<Pred&&>(pred))))
-		-> decltype(_find_if(node, static_cast<Pred&&>(pred))) {
-		return _find_if(node, static_cast<Pred&&>(pred));
+	template<class Pred = std::function<bool(decltype(null<Derived const>->value()))>>
+	_NODISCARD static auto find_if(const_nodeptr node, Pred&& pred) noexcept(noexcept(_base::_find_if(node, static_cast<Pred&&>(pred))))
+		-> decltype(_base::_find_if(node, static_cast<Pred&&>(pred))) {
+		return _base::_find_if(node, static_cast<Pred&&>(pred));
 	}
 
 protected:
 	nodeptr m_next;
+
+	constexpr singly_linked_node() noexcept : m_next(nullptr) {}
+
+	constexpr singly_linked_node(nodeptr const next) noexcept : m_next(next) {}
 
 	singly_linked_node(singly_linked_node const&) = delete;
 	singly_linked_node& operator=(singly_linked_node const&) = delete;
 
 	singly_linked_node(singly_linked_node&&) = delete;
 	singly_linked_node& operator=(singly_linked_node&&) = delete;
-
-	constexpr singly_linked_node() noexcept : m_next(nullptr) {}
-
-	constexpr singly_linked_node(nodeptr const next) noexcept : m_next(next) {}
 
 	template<class, class> friend struct singly_linked_node;
 };
@@ -187,16 +204,18 @@ public:
 
 	_NODISCARD constexpr T const&& value() const&& noexcept { return static_cast<T const&&>(*this); }
 
+	using _base::remove_all_next_if;
+
 	template<class Pred = std::function<bool(T const&)>>
 	auto remove_all_next_if(Pred&& pred)
-		-> decltype(_base::_remove_if(this, static_cast<Pred&&>(pred))) {
-		return _base::_remove_if(this, static_cast<Pred&&>(pred));
+		-> decltype(_base::remove_all_next_if(this, static_cast<Pred&&>(pred))) {
+		return _base::remove_all_next_if(this, static_cast<Pred&&>(pred));
 	}
 
 	template<class... Args, class Pred = std::function<bool(T const&, Args...)>>
 	auto remove_all_next_if(Pred&& pred, Args&&... args)
-		-> decltype(_base::_remove_if(this, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...)) {
-		return _base::_remove_if(this, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
+		-> decltype(_base::remove_all_next_if(this, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...)) {
+		return _base::remove_all_next_if(this, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
 	}
 
 protected:
@@ -244,11 +263,11 @@ template<class Node> struct iterator<singly_linked_node<void, Node> const>
 	_NODISCARD constexpr const_pointer operator->() const noexcept { return &cur->value(); }
 
 	template<class U> _NODISCARD constexpr auto operator==(iterator<U> const& other) const noexcept
-		-> type_if<bool, is_base_of_v<singly_linked_node<void, void>, U>, convertible_v<decltype(cur == other.cur), bool>> {
+		-> type_if<bool, is_base_of_v<singly_linked_node<void, Node>, U>, convertible_v<decltype(cur == other.cur), bool>> {
 		return cur == other.cur;
 	}
 	template<class U> _NODISCARD constexpr auto operator!=(iterator<U> const& other) const noexcept
-		-> type_if<bool, is_base_of_v<singly_linked_node<void, void>, U>, convertible_v<decltype(cur != other.cur), bool>> {
+		-> type_if<bool, is_base_of_v<singly_linked_node<void, Node>, U>, convertible_v<decltype(cur != other.cur), bool>> {
 		return cur != other.cur;
 	}
 };
@@ -283,11 +302,11 @@ template<class Node> struct iterator<singly_linked_node<void, Node>>
 	_NODISCARD constexpr const_pointer operator->() const noexcept { return &cur->value(); }
 
 	template<class U> _NODISCARD constexpr auto operator==(iterator<U> const& other) const noexcept
-		-> type_if<bool, is_base_of_v<singly_linked_node<void, void>, U>, convertible_v<decltype(cur == other.cur), bool>> {
+		-> type_if<bool, is_base_of_v<singly_linked_node<void, Node>, U>, convertible_v<decltype(cur == other.cur), bool>> {
 		return cur == other.cur;
 	}
 	template<class U> _NODISCARD constexpr auto operator!=(iterator<U> const& other) const noexcept
-		-> type_if<bool, is_base_of_v<singly_linked_node<void, void>, U>, convertible_v<decltype(cur != other.cur), bool>> {
+		-> type_if<bool, is_base_of_v<singly_linked_node<void, Node>, U>, convertible_v<decltype(cur != other.cur), bool>> {
 		return cur != other.cur;
 	}
 

@@ -4,6 +4,7 @@
 #include "util.hpp"
 #include "object.hpp"
 #include <memory>
+#include <optional>
 
 template<class...> struct optional
 {
@@ -69,7 +70,7 @@ protected:
             : _data_base() {
         }
 
-        template<class V> constexpr explicit _base(V&& value) noexcept(std::is_nothrow_constructible<T, V&&>::value)
+        template<class V> constexpr explicit _base(V&& value) noexcept(is_nothrow_constructible_v<T, V&&>)
             : _data_base(static_cast<V&&>(value)) {
         }
 
@@ -93,15 +94,21 @@ protected:
             m_present = true;
         }
 
-        template<class V> void _assign(V&& value) noexcept(is_nothrow_constructible_v<T, V&&>&& is_nothrow_assignable_v<T, V&&>) {
-            if (m_present)
-            {
+        template<class V> constexpr void _assign(V&& value, std::false_type) noexcept(is_nothrow_constructible_v<T, V&&>) {
+            _reset();
+            _construct(static_cast<V&&>(value));
+        }
+
+        template<class V> constexpr void _assign(V&& value, std::true_type) noexcept(is_nothrow_constructible_v<T, V&&>&& is_nothrow_assignable_v<T, V&&>) {
+            if (m_present) {
                 m_value = static_cast<V&&>(value);
+            } else {
+                _assign(static_cast<V&&>(value), std::false_type);
             }
-            else
-            {
-                _construct(static_cast<V&&>(value));
-            }
+        }
+
+        template<class V> void _assign(V&& value) noexcept(noexcept(_assign(static_cast<V&&>(value), is_assignable<T&, V&&>))) {
+            _assign(static_cast<V&&>(value), is_assignable<T&, V&&>);
         }
 
         using _data_base::m_present;
@@ -186,7 +193,7 @@ template<class T> struct optional<T> : protected optional<>::_base<T>
 
     _NODISCARD constexpr bool has_value() const noexcept { return _base::_present(); }
 
-    constexpr operator bool() const noexcept { return has_value(); }
+    _NODISCARD constexpr operator bool() const noexcept { return has_value(); }
 
     _NODISCARD constexpr T& operator*() & noexcept { return _base::_ref(); }
 
@@ -208,7 +215,19 @@ template<class T> struct optional<T> : protected optional<>::_base<T>
 
     _NODISCARD constexpr T const&& value() const&& noexcept { return static_cast<T const&&>(_base::_ref()); }
 
-    _NODISCARD constexpr T const& or_default(T&& deflt) const noexcept {
+    _NODISCARD constexpr T& or_default(T& deflt) noexcept {
+        return has_value() ? value() : deflt;
+    }
+
+    _NODISCARD constexpr T const& or_default(T const& deflt) const noexcept {
+        return has_value() ? value() : deflt;
+    }
+
+    _NODISCARD constexpr T& or_default(T&& deflt) noexcept {
+        return has_value() ? value() : deflt;
+    }
+
+    _NODISCARD constexpr T const& or_default(T const&& deflt) const noexcept {
         return has_value() ? value() : deflt;
     }
 

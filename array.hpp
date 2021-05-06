@@ -64,7 +64,8 @@ protected:
         return dst;
     }
 
-    template<class D, class S, class Mapper, class... Args> constexpr static D* _map_construct(D* dst, D const* end, S src, Mapper& mapper, Args&&... args) noexcept(is_nothrow_constructible_v<D, decltype(*src)>) {
+    template<class D, class S, class Mapper, class... Args> constexpr static D* _map_construct(D* dst, D const* end, S src, Mapper& mapper, Args&&... args)
+        noexcept(is_nothrow_constructible_v<D, util::invoke_result_t<Mapper, decltype(*src), Args...>> && util::nothrow_invocable_v<Mapper, decltype(*src), Args...>) {
         for (; dst != end; ++dst, (void)++src)
             new(dst) D(util::invoke(mapper, *src, static_cast<Args&&>(args)...));
 
@@ -80,47 +81,31 @@ protected:
         _args_construct(data + 1, static_cast<Args&&>(args)...);
     }
 
-    template<class T, class... Args>
-    constexpr _INLINE_VAR static bool nothrow_args_construct = noexcept(_args_construct<T>(0, std::declval<Args>()...));
-
-    template<class T, class... Args>
-    constexpr _INLINE_VAR static bool nothrow_args_assign = noexcept(_args_assign<T>(0, std::declval<Args>()...));
-
-public:
-    template<class... Args> _NODISCARD static array<common_type<Args...>, sizeof...(Args)> of(Args&&... args) noexcept(nothrow_args_construct<common_type<Args...>, Args...>) {
-        return { static_cast<Args&&>(args)... };
-    }
-
-    template<class I> _NODISCARD static auto from(I begin, I end)
-        -> type_if<array<remove_const_t<remove_ref_t<decltype(*begin)>>>, iterators::fwd_iter_v<I>> {
-        return { begin, end };
-    }
-
-    template<class T> _NODISCARD static array<T> from(typename array<T>::size_type size, T const* data) {
-        return { size, data };
-    }
-
-    template<class T> _NODISCARD static array<T> from(std::nothrow_t, typename array<T>::size_type size, T const* data) noexcept(is_nothrow_constructible_v<T, T const&>)
-    {
-        return { std::nothrow, size, data };
-    }
-
-protected:
     template<class Array> _INLINE_VAR constexpr static auto _size = null<Array>->size();
 
     template<class T, size_t N> _INLINE_VAR constexpr static size_t _size<T[N]> = N;
 
     template<class C> static sfinae<decltype(_size<remove_ref_t<C>>)> _static_size(int);
     template<class C> static std::false_type _static_size(...);
+
 public:
-    template<class Array> _INLINE_VAR constexpr static auto size = _size<remove_ref_t<Array>>;
+    template<class T, class... Args>
+    constexpr _INLINE_VAR static bool nothrow_args_construct = noexcept(_args_construct<T>(0, std::declval<Args>()...));
+
+    template<class T, class... Args>
+    constexpr _INLINE_VAR static bool nothrow_args_assign = noexcept(_args_assign<T>(0, std::declval<Args>()...));
+
+    template<class Array> constexpr _INLINE_VAR static auto size = _size<remove_ref_t<Array>>;
 
     template<class C> struct has_constexpr_size : decltype(_static_size<C>(0)) {};
 
-    template<class C> _INLINE_VAR constexpr static bool has_constexpr_size_v = has_constexpr_size<C>::value;
+    template<class C> constexpr _INLINE_VAR static bool has_constexpr_size_v = has_constexpr_size<C>::value;
 
 protected:
-    template<class C, class Proc, class... Args> constexpr static auto _foreach(C& c, Proc&& proc, Args&&... args) noexcept(util::nothrow_invocable_v<Proc, decltype(*c._Unchecked_begin()), Args...>) 
+    struct _dummy {};
+    struct _map {};
+
+    template<class C, class Proc, class... Args> constexpr static auto _foreach(C& c, Proc&& proc, Args&&... args) noexcept(util::nothrow_invocable_v<Proc, decltype(*c._Unchecked_begin()), Args...>)
         -> type_if<decltype(c.size()), util::invocable_v<Proc, decltype(*c._Unchecked_begin()), Args...>> {
         for (auto i = c._Unchecked_begin(), end = c._Unchecked_end(); i != end; ++i)
         {
@@ -139,10 +124,28 @@ protected:
         return c.size();
     }
 
-    array() {}
+public:
+    template<class... Args> _NODISCARD static array<common_type<Args...>, sizeof...(Args)> of(Args&&... args) noexcept(nothrow_args_construct<common_type<Args...>, Args...>) {
+        return { static_cast<Args&&>(args)... };
+    }
 
-    struct _dummy {};
-    struct _map {};
+    template<class Array, class Mapper, class... Args, class T = type_if<util::invoke_result_t<Mapper, container::const_reference<Array>, Args...>, container::data_availability_v<Array>>>
+    _NODISCARD static array<T, size<Array>> map(Array const& arr, Mapper&& mapper, Args&&... args) {
+        return { _map{}, container::data(arr), mapper, static_cast<Args&&>(args)... };
+    }
+
+    template<class I> _NODISCARD static auto from(I begin, I end)
+        -> type_if<array<remove_const_t<remove_ref_t<decltype(*begin)>>>, iterators::fwd_iter_v<I>> {
+        return { begin, end };
+    }
+
+    template<class T> _NODISCARD static array<T> from(typename array<T>::size_type size, T const* data) {
+        return { size, data };
+    }
+
+    template<class T> _NODISCARD static array<T> from(std::nothrow_t, typename array<T>::size_type size, T const* data) noexcept(is_nothrow_constructible_v<T, T const&>) {
+        return { std::nothrow, size, data };
+    }
 
     template<class, size_t...> friend struct array;
 };
@@ -273,13 +276,13 @@ template<class T, size_t N> struct array<T, N>
         arrays::_move_construct(_Unchecked_begin(), _Unchecked_end(), o._Unchecked_begin());
     }
 
-    template<class Array, class V = container::value_type<Array>, type_if<int, N == arrays::size<Array>, is_constructible_v<T, V const&>> = 0>
+    template<class Array, class V = container::value_type<Array>, type_if<int, N == arrays::size<Array>, container::data_availability_v<Array>, is_constructible_v<T, V const&>> = 0>
     constexpr array(Array const& arr) noexcept(is_nothrow_constructible_v<T, V const&>)
         : m_() {
         arrays::_copy_construct(_Unchecked_begin(), _Unchecked_end(), container::data(arr));
     }
 
-    template<class Array, class V = container::value_type<Array>, type_if<int, N == arrays::size<Array>, is_constructible_v<T, V&&>> = 0>
+    template<class Array, class V = container::value_type<Array>, type_if<int, N == arrays::size<Array>, container::data_availability_v<Array>, is_constructible_v<T, V&&>> = 0>
     constexpr array(Array&& arr) noexcept(is_nothrow_constructible_v<T, V&&>)
         : m_() {
         arrays::_move_construct(_Unchecked_begin(), _Unchecked_end(), container::data(arr));
@@ -309,13 +312,13 @@ template<class T, size_t N> struct array<T, N>
         return *this;
     }
 
-    template<class Array, class V = container::value_type<Array>, type_if<int, N == arrays::size<Array>, is_assignable_v<T, V const&>> = 0>
+    template<class Array, class V = container::value_type<Array>, type_if<int, N == arrays::size<Array>, container::data_availability_v<Array>, is_assignable_v<T, V const&>> = 0>
     constexpr array& operator=(Array const& arr) noexcept(is_nothrow_assignable_v<T, V const&>) {
         arrays::_copy_assign(_Unchecked_begin(), _Unchecked_end(), container::data(arr));
         return *this;
     }
 
-    template<class Array, class V = container::value_type<Array>, type_if<int, N == arrays::size<Array>, is_assignable_v<T, V&&>> = 0>
+    template<class Array, class V = container::value_type<Array>, type_if<int, N == arrays::size<Array>, container::data_availability_v<Array>, is_assignable_v<T, V&&>> = 0>
     constexpr array& operator=(Array&& arr) noexcept(is_nothrow_assignable_v<T, V&&>) {
         arrays::_move_assign(_Unchecked_begin(), _Unchecked_end(), container::data(arr));
         return *this;
@@ -347,7 +350,7 @@ template<class T, size_t N> struct array<T, N>
     }
 
     template<class Array, class Pred = std::function<bool(const_reference, container::const_reference<Array>)>>
-    _NODISCARD constexpr type_if<bool, N == arrays::size<Array>, convertible_v<util::invoke_result_t<Pred, const_reference, container::const_reference<Array>>, bool>>
+    _NODISCARD constexpr type_if<bool, N == arrays::size<Array>, container::data_availability_v<Array>, convertible_v<util::invoke_result_t<Pred, const_reference, container::const_reference<Array>>, bool>>
         equal(Array const& arr, Pred&& pred) const {
         return std::equal(_Unchecked_begin(), _Unchecked_end(), container::data(arr), static_cast<Pred&&>(pred));
     }
@@ -505,9 +508,9 @@ template<class T, size_t N> struct array<T, N>
     template<class... Args, class Proc = std::function<void(const_reference, Args...)>>
     constexpr type_if<size_type, util::invocable_v<Proc, const_reference, Args...>> rforeach(Proc&& proc, Args&&... args) const { return arrays::_rforeach(*this, static_cast<Proc&&>(proc), static_cast<Args&&>(args)...); }
 
-    template<class Mapper, class U = util::invoke_result_t<Mapper, const_reference>>
-    constexpr _NODISCARD type_if<array<U, N>, !is_same_v<void, U>> map(Mapper&& mapper) const {
-        return { arrays::_map{}, _Unchecked_begin(), mapper };
+    template<class Mapper, class... Args, class U = util::invoke_result_t<Mapper, const_reference, Args...>>
+    constexpr _NODISCARD type_if<array<U, N>, !is_same_v<void, U>> map(Mapper&& mapper, Args&&... args) const {
+        return { arrays::_map{}, _Unchecked_begin(), mapper, static_cast<Args&&>(args)... };
     }
 
     ~array() noexcept {
@@ -522,10 +525,12 @@ protected:
 
     constexpr array(arrays::_dummy) noexcept : m_() {}
 
-    template<class S, class Mapper> constexpr array(arrays::_map, S s, Mapper& mapper)
+    template<class S, class Mapper, class... Args> constexpr array(arrays::_map, S s, Mapper& mapper, Args&&... args)
         : m_() {
-        arrays::_map_construct(_Unchecked_begin(), _Unchecked_end(), s, mapper);
+        arrays::_map_construct(_Unchecked_begin(), _Unchecked_end(), s, mapper, static_cast<Args&&>(args)...);
     }
+
+    template<class, size_t...> friend struct array;
 
 public:
     constexpr operator std::array<T, N>& () & noexcept { return reinterpret_cast<std::array<T, N>&>(*this); }
@@ -615,9 +620,8 @@ template<class T> struct array<T>
     using reverse_iterator = ::reverse_iterator<pointer>;
     using const_reverse_iterator = ::reverse_iterator<const_pointer>;
 
-    template<class... Args, type_if<int, is_constructible_from_each_v<T, Args...>> = 0>
-    constexpr static array<T, sizeof...(Args)> of(Args&&... args) noexcept(arrays::nothrow_args_construct<T, Args...>)
-    {
+    template<class... Args> constexpr static type_if<array<T, sizeof...(Args)>, is_constructible_from_each_v<T, Args...>>
+        of(Args&&... args) noexcept(arrays::nothrow_args_construct<T, Args...>) {
         return { static_cast<Args&&>(args)... };
     }
 
@@ -629,12 +633,12 @@ template<class T> struct array<T>
     array(size_type const n, V const& value) : array(_n_copies(n, value), n) {
     }
 
-    template<class I, type_if<int, is_constructible_v<T, decltype(*std::declval<I>())>> = 0>
+    template<class I, type_if<int, iterators::fwd_iter_v<I>, is_constructible_v<T, decltype(*std::declval<I>())>> = 0>
     array(I begin, I end) : array() {
         array::_init(m_elems, m_size, begin, end);
     }
 
-    template<class I, class Filter, class U = decltype(*std::declval<I>()), type_if<int, convertible_v<util::invoke_result_t<Filter, U>, bool>, is_constructible_v<T, U>> = 0>
+    template<class I, class Filter, class U = decltype(*std::declval<I>()), type_if<int, iterators::fwd_iter_v<I>, convertible_v<util::invoke_result_t<Filter, U>, bool>, is_constructible_v<T, U>> = 0>
     array(I begin, I end, Filter&& filter)
         : m_elems(nullptr), m_size(array::_filtered(m_elems, 0, begin, end, filter)) {
     }

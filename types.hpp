@@ -17,11 +17,32 @@ template<class...> constexpr _INLINE_VAR nullptr_t null = nullptr;
 
 template<class T> constexpr _INLINE_VAR T* null<T> = nullptr;
 
+using std::true_type;
+using std::false_type;
+
+template<bool _Test, class _True = true_type, class _False = false_type>
+using conditional = typename std::conditional<_Test, _True, _False>::type;
+
+template<class _BoolConst, class _True = true_type, class _False = false_type>
+using conditional_value = typename std::conditional<_BoolConst::value, _True, _False>::type;
+
+template<bool _Const, bool... _Consts> struct conjunction : conditional<_Const, conjunction<_Consts...>> {};
+
+template<bool _Const> struct conjunction<_Const> : conditional<_Const>{};
+
+struct negate {};
+
+template<class _BoolConst, class... _BoolConsts> struct conjunction_value : conditional_value<_BoolConst, conjunction_value<_BoolConsts...>, _BoolConst> {};
+
+template<class _BoolConst, class... _BoolConsts> struct conjunction_value<negate, _BoolConst, _BoolConsts...> : conditional_value<_BoolConst, false_type, conjunction_value<_BoolConsts...>> {};
+
+template<class _BoolConst> struct conjunction_value<_BoolConst> : _BoolConst {};
+
+template<class _BoolConst> struct conjunction_value<negate, _BoolConst> : conditional_value<_BoolConst, false_type, true_type> {};
+
 template<class _BoolConst, class... _BoolConsts> constexpr _INLINE_VAR bool all_value = _BoolConst::value && all_value<_BoolConsts...>;
 
 template<class _BoolConst> constexpr _INLINE_VAR bool all_value<_BoolConst> = _BoolConst::value;
-
-struct negate {};
 
 template<class _BoolConst, class... _BoolConsts> constexpr _INLINE_VAR bool all_value<negate, _BoolConst, _BoolConsts...> = !_BoolConst::value && all_value<_BoolConsts...>;
 
@@ -31,12 +52,9 @@ template<bool _Const, bool... _Consts> constexpr _INLINE_VAR bool all_const = _C
 
 template<bool _Const> constexpr _INLINE_VAR bool all_const<_Const> = _Const;
 
-template<bool _Const, bool... _Consts>
-struct conjunction_type : std::integral_constant<bool, all_const<_Const, _Consts...>> {};
+template<class...> struct sfinae : true_type {};
 
-template<class...> struct sfinae : std::true_type {};
-
-template<class T> struct sfinae<T> : std::true_type
+template<class T> struct sfinae<T> : true_type
 {
 	using result_type = T;
 };
@@ -46,12 +64,6 @@ template<class, class...> constexpr _INLINE_VAR bool sfinae_v = true;
 template<class T, bool _Const, bool... _Consts> using type_if = typename std::enable_if<all_const<_Const, _Consts...>, T>::type;
 
 template<class T, class _BoolConst, class... _BoolConsts> using type_if_value = typename std::enable_if<all_value<_BoolConst, _BoolConsts...>, T>::type;
-
-template<bool _Test, class _True = std::true_type, class _False = std::false_type>
-using conditional = typename std::conditional<_Test, _True, _False>::type;
-
-template<class _BoolConst, class _True = std::true_type, class _False = std::false_type>
-using conditional_value = typename std::conditional<_BoolConst::value, _True, _False>::type;
 
 template<class... T> using common_type = typename std::common_type<T...>::type;
 

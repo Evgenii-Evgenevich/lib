@@ -9,24 +9,28 @@
 
 struct CMakeProject1
 {
-	CMakeProject1(int)
-	{
+	CMakeProject1(int) {
 	}
 
 	//CMakeProject1(CMakeProject1 const&) = delete;
 
-	constexpr static float& sum(float const& e, float& sum_res) noexcept
-	{
+	constexpr static float pow(float num, unsigned n) noexcept {
+		return n == 0 ? 1 : (n == 1 ? num : (num * pow(num, n - 1)));
+	}
+
+	constexpr static bool is_zero(int i) noexcept {
+		return i == 0;
+	}
+
+	constexpr static float& sum(float const& e, float& sum_res) noexcept {
 		return sum_res += e;
 	}
 
-	float& _sum(float const& e, float& sum_res) const noexcept
-	{
+	float& _sum(float const& e, float& sum_res) const noexcept {
 		return sum_res += e;
 	}
 
-	void __sum(float& e) noexcept
-	{
+	void __sum(float& e) noexcept {
 		_sum_res += e;
 	}
 
@@ -35,36 +39,28 @@ struct CMakeProject1
 
 _INLINE_VAR constexpr auto CMakeProject1_sum = &CMakeProject1::__sum;
 
-
-int hkk(float f, int i)
+struct _println
 {
-	return f + i;
-}
+	template<class V> constexpr auto operator()(V const& v) const noexcept(noexcept(std::cout << v << std::endl))
+		-> decltype(std::cout << v << std::endl) {
+		return std::cout << v << std::endl;
+	}
+};
 
-void println(int const& i)
-{
-	std::cout << i << std::endl;
-}
+constexpr _INLINE_VAR _println println{};
 
 void gdsfs(CMakeProject1 const& i)
 {
 }
 
-constexpr bool is_zero(int i) noexcept
-{
-	return i == 0;
-}
-
 class MyClass
 {
 public:
-	MyClass()
-	{
+	MyClass() {
 		std::cout << "MyClass was constructed\n";
 	}
 
-	~MyClass()
-	{
+	~MyClass() {
 		std::cout << "MyClass was destructed\n";
 	}
 
@@ -74,6 +70,23 @@ private:
 
 int main()
 {
+	optional<int> oi;
+
+	bool bbb;
+
+	new(&bbb) bool(CMakeProject1::is_zero(1));
+
+	int i = 1;
+
+	i = (oi.or_default(1) = 3);
+
+	std::cout << i;
+	std::cout << std::endl;
+	std::cout << std::endl;
+
+
+	array<int, 6> fffff({ 1,2,3,4,5,6 });
+
 	int fdf = 4;
 
 	auto sdfsd = [&fdf](int dd) { return fdf += dd; };
@@ -136,6 +149,8 @@ int main()
 		<< f[1] << std::endl
 		<< f[2] << std::endl;
 
+	auto fff = arrays::map(f, CMakeProject1::pow, 4);
+
 	constexpr size_t arr_s = arrays::size<array<int, 5>>;
 
 	tree_node<int, comporator<>> treenode(nullptr, 5);
@@ -158,11 +173,27 @@ int main()
 
 	decltype(treenode)::remove(f9t.first);
 
-	treenode.find(4);
+	decltype(treenode)::remove(treenode.find(4));
+
+	std::cout << std::endl;
+	std::cout << std::endl;
+	std::cout << "treenode";
+	std::cout << std::endl;
 
 	treenode.foreach(println);
 
 	front_linked_list<int> fll;
+
+	for (auto i = fll.begin(); i != fll.end(); ++i)
+	{
+
+	}
+
+	sizeof singly_linked_node<void, void>;
+
+	fll.remove_if(CMakeProject1::is_zero);
+
+	//front_linked_list<int>::node::find_if(fll.pop_front().get(), [](int) {return true; });
 
 	return 0;
 }

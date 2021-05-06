@@ -184,7 +184,7 @@ public:
 	}
 
 protected:
-	template<class T> constexpr static conjunction_type<
+	template<class T> constexpr static conjunction<
 		!is_unsigned_v<T>,
 		convertible_v<decltype(std::declval<T>() == 0), bool>,
 		convertible_v<decltype(std::declval<T>() != 0), bool>,

@@ -76,13 +76,13 @@ public:
 	struct _invoke
 	{
 		template<class F, class... Args>
-		constexpr invoke_result_t<F, Args...> operator()(F&& f, Args&&... args) noexcept(nothrow_invocable_v<F, Args...>)
+		constexpr invoke_result_t<F, Args...> operator()(F&& f, Args&&... args) const noexcept(nothrow_invocable_v<F, Args...>)
 		{
 			return _invoker<F, Args...>{}(static_cast<F&&>(f), static_cast<Args&&>(args)...);
 		}
 	};
 
-	_INLINE_VAR static _invoke invoke2;
+	constexpr _INLINE_VAR static _invoke invoke2{};
 
 protected:
 	template<class R, class B, class T> struct _member_ptr
