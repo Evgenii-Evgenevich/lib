@@ -60,24 +60,20 @@ public:
 
 protected:
 	template<class F, class... Args> static sfinae<invoke_result_t<F, Args...>> _is_invocable(int);
-	template<class...> static std::false_type _is_invocable(...);
+	template<class...> static false_type _is_invocable(...);
 
 public:
 	template<class F, class... Args> struct invocable : decltype(_is_invocable<F, Args...>(0)) {};
 
 	template<class F, class... Args> constexpr _INLINE_VAR static bool invocable_v = invocable<F, Args...>::value;
 
-	template<class F, class... Args>
-	constexpr static invoke_result_t<F, Args...> invoke(F&& f, Args&&... args) noexcept(nothrow_invocable_v<F, Args...>)
-	{
+	template<class F, class... Args> constexpr static invoke_result_t<F, Args...> invoke(F&& f, Args&&... args) noexcept(nothrow_invocable_v<F, Args...>) {
 		return _invoker<F, Args...>{}(static_cast<F&&>(f), static_cast<Args&&>(args)...);
 	}
 
 	struct _invoke
 	{
-		template<class F, class... Args>
-		constexpr invoke_result_t<F, Args...> operator()(F&& f, Args&&... args) const noexcept(nothrow_invocable_v<F, Args...>)
-		{
+		template<class F, class... Args> constexpr invoke_result_t<F, Args...> operator()(F&& f, Args&&... args) const noexcept(nothrow_invocable_v<F, Args...>) {
 			return _invoker<F, Args...>{}(static_cast<F&&>(f), static_cast<Args&&>(args)...);
 		}
 	};
@@ -88,24 +84,23 @@ protected:
 	template<class R, class B, class T> struct _member_ptr
 	{
 		using P = R B::*;
-		_INLINE_VAR constexpr static bool is_member_function_pointer_v = std::is_member_function_pointer<P>::value;
-		_INLINE_VAR constexpr static bool is_member_object_pointer_v = std::is_member_object_pointer<P>::value;
+		constexpr _INLINE_VAR static bool is_member_function_pointer_v = std::is_member_function_pointer<P>::value;
+		constexpr _INLINE_VAR static bool is_member_object_pointer_v = std::is_member_object_pointer<P>::value;
+
+		P m_ptr;
+		T& m_obj;
 
 		constexpr _member_ptr(P ptr, T& obj) noexcept : m_ptr(ptr), m_obj(obj) {}
 
 		template<class... Args>
-		constexpr auto operator()(Args&&... args) noexcept(noexcept((std::declval<T>().*std::declval<P>())(static_cast<Args&&>(args)...)))
-			-> decltype((std::declval<T>().*std::declval<P>())(static_cast<Args&&>(args)...)) {
+		constexpr auto operator()(Args&&... args) noexcept(noexcept((m_obj.*m_ptr)(static_cast<Args&&>(args)...)))
+			-> decltype((m_obj.*m_ptr)(static_cast<Args&&>(args)...)) {
 			return (m_obj.*m_ptr)(static_cast<Args&&>(args)...);
 		}
 
-		template<class M = decltype(m_obj.*m_ptr)> constexpr operator M& () const noexcept
-		{
+		template<class M = decltype(m_obj.*m_ptr)> constexpr operator M& () const noexcept {
 			return m_obj.*m_ptr;
 		}
-
-		P m_ptr;
-		T& m_obj;
 	};
 
 public:

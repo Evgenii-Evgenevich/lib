@@ -10,19 +10,15 @@ namespace std
 #include "iterator.hpp"
 #include "object.hpp"
 
-template<class T, class Arg, class... Args> struct is_constructible_from_each :
-    conditional<is_constructible_v<T, Arg>, is_constructible_from_each<T, Args...>> {};
+template<class T, class Arg, class... Args> struct is_constructible_from_each : conditional<is_constructible_v<T, Arg>, is_constructible_from_each<T, Args...>> {};
 
-template<class T, class Arg> struct is_constructible_from_each<T, Arg> :
-    conditional<is_constructible_v<T, Arg>> {};
+template<class T, class Arg> struct is_constructible_from_each<T, Arg> : conditional<is_constructible_v<T, Arg>> {};
 
 template<class T, class Arg, class... Args> constexpr _INLINE_VAR bool is_constructible_from_each_v = is_constructible_from_each<T, Arg, Args...>::value;
 
-template<class T, class Arg, class... Args> struct is_assignable_from_each :
-    conditional<is_assignable_v<T, Arg>, is_assignable_from_each<T, Args...>> {};
+template<class T, class Arg, class... Args> struct is_assignable_from_each : conditional<is_assignable_v<T, Arg>, is_assignable_from_each<T, Args...>> {};
 
-template<class T, class Arg> struct is_assignable_from_each<T, Arg> :
-    conditional<is_assignable_v<T, Arg>> {};
+template<class T, class Arg> struct is_assignable_from_each<T, Arg> : conditional<is_assignable_v<T, Arg>> {};
 
 template<class T, class Arg, class... Args> constexpr _INLINE_VAR bool is_assignable_from_each_v = is_assignable_from_each<T, Arg, Args...>::value;
 
@@ -78,7 +74,7 @@ protected:
     struct _back_pushable
     {
         template<class C, class... Args> static sfinae<decltype(std::declval<C>().push_back(std::declval<Args>()...))> test(int);
-        template<class...> static std::false_type test(...);
+        template<class...> static false_type test(...);
     };
 public:
     template<class C, class... Args> struct back_pushable : decltype(_back_pushable::test<C, Args...>(0)) {};
@@ -89,7 +85,7 @@ protected:
     struct _front_pushable
     {
         template<class C, class... Args> static sfinae<decltype(std::declval<C>().push_front(std::declval<Args>()...))> test(int);
-        template<class...> static std::false_type test(...);
+        template<class...> static false_type test(...);
     };
 public:
     template<class C, class... Args> struct front_pushable : decltype(_front_pushable::test<C, Args...>(0)) {};
@@ -100,7 +96,7 @@ protected:
     struct _insertable
     {
         template<class C, class... Args> static sfinae<decltype(std::declval<C>().insert(std::declval<Args>()...))> test(int);
-        template<class...> static std::false_type test(...);
+        template<class...> static false_type test(...);
     };
 public:
     template<class C, class... Args> struct insertable : decltype(_insertable::test<C, Args...>(0)) {};
@@ -111,7 +107,7 @@ protected:
     struct _after_insertable
     {
         template<class C, class... Args> static sfinae<decltype(std::declval<C>().insert_after(std::declval<Args>()...))> test(int);
-        template<class...> static std::false_type test(...);
+        template<class...> static false_type test(...);
     };
 public:
     template<class C, class... Args> struct after_insertable : decltype(_after_insertable::test<C, Args...>(0)) {};
@@ -123,13 +119,13 @@ protected:
     {
         template<class C> static sfinae<decltype(std::declval<C>().begin())> test(int);
         template<class C> static sfinae<decltype(std::begin(std::declval<lvalue_ref_t<C>>()))> test(long);
-        template<class> static std::false_type test(...);
+        template<class> static false_type test(...);
     };
     struct _end_iterable
     {
         template<class C> static sfinae<decltype(std::declval<C>().end())> test(int);
         template<class C> static sfinae<decltype(std::end(std::declval<lvalue_ref_t<C>>()))> test(long);
-        template<class> static std::false_type test(...);
+        template<class> static false_type test(...);
     };
 public:
     template<class C> constexpr _INLINE_VAR static bool iterable_v =
@@ -145,7 +141,7 @@ protected:
 #if __cpp_lib_make_reverse_iterator >= 201402L
         template<class C> static sfinae<decltype(std::rbegin(std::declval<lvalue_ref_t<C>>()))> test(long);
 #endif // __cpp_lib_make_reverse_iterator
-        template<class> static std::false_type test(...);
+        template<class> static false_type test(...);
     };
     struct _reverse_end_iterable
     {
@@ -153,7 +149,7 @@ protected:
 #if __cpp_lib_make_reverse_iterator >= 201402L
         template<class C> static sfinae<decltype(std::rend(std::declval<lvalue_ref_t<C>>()))> test(long);
 #endif // __cpp_lib_make_reverse_iterator
-        template<class> static std::false_type test(...);
+        template<class> static false_type test(...);
     };
 public:
     template<class C> constexpr _INLINE_VAR static bool reverse_iterable_v =
@@ -169,7 +165,7 @@ protected:
 #if __cpp_lib_nonmember_container_access >= 201411
         template<class C> static sfinae<decltype(std::size(std::declval<lvalue_ref_t<C>>()))> test(long);
 #endif // __cpp_lib_nonmember_container_access
-        template<class> static std::false_type test(...);
+        template<class> static false_type test(...);
     };
 public:
     template<class C> struct sizeable : decltype(_sizeable::test<C>(0)) {};
@@ -183,7 +179,7 @@ protected:
 #if __cpp_lib_nonmember_container_access >= 201411
         template<class C> static sfinae<decltype(std::data(std::declval<lvalue_ref_t<C>>()))> test(long);
 #endif // __cpp_lib_nonmember_container_access
-        template<class> static std::false_type test(...);
+        template<class> static false_type test(...);
     };
 public:
     template<class C> struct data_availability : decltype(_data_availability::test<C>(0)) {};
@@ -194,7 +190,7 @@ protected:
     struct _foreachable
     {
         template<class C, class Proc, class... Args> static sfinae<decltype(std::declval<C>().foreach(std::declval<Proc>(), std::declval<Args>()...))> test(int);
-        template<class...> static std::false_type test(...);
+        template<class...> static false_type test(...);
     };
 public:
     template<class C, class Proc = std::function<void(const_reference<C>)>, class... Args> struct foreachable :
@@ -207,7 +203,7 @@ protected:
     struct _reverse_foreachable
     {
         template<class C, class Proc = std::function<void(const_reference<C>)>, class... Args> static sfinae<decltype(std::declval<C>().rforeach(std::declval<Proc>(), std::declval<Args>()...))> test(int);
-        template<class...> static std::false_type test(...);
+        template<class...> static false_type test(...);
     };
 public:
     template<class C, class Proc = std::function<void(const_reference<C>)>, class... Args> struct reverse_foreachable :
@@ -226,8 +222,7 @@ public:
 
     struct _begin
     {
-        template<class C> _NODISCARD constexpr auto operator()(C&& _iterable) const noexcept -> decltype(container::begin(static_cast<C&&>(_iterable)))
-        {
+        template<class C> _NODISCARD constexpr auto operator()(C&& _iterable) const noexcept -> decltype(container::begin(static_cast<C&&>(_iterable))) {
             return container::begin(static_cast<C&&>(_iterable));
         }
     };
@@ -236,8 +231,7 @@ public:
 
     struct _end
     {
-        template<class C> _NODISCARD constexpr auto operator()(C& _iterable) const noexcept -> decltype(container::end(static_cast<C&&>(_iterable)))
-        {
+        template<class C> _NODISCARD constexpr auto operator()(C& _iterable) const noexcept -> decltype(container::end(static_cast<C&&>(_iterable))) {
             return container::end(static_cast<C&&>(_iterable));
         }
     };
@@ -269,8 +263,7 @@ public:
 
     struct _rbegin
     {
-        template<class C> _NODISCARD constexpr auto operator()(C&& _reverse_iterable) const noexcept -> decltype(container::rbegin(static_cast<C&&>(_reverse_iterable)))
-        {
+        template<class C> _NODISCARD constexpr auto operator()(C&& _reverse_iterable) const noexcept -> decltype(container::rbegin(static_cast<C&&>(_reverse_iterable))) {
             return container::rbegin(static_cast<C&&>(_reverse_iterable));
         }
     };
@@ -279,8 +272,7 @@ public:
 
     struct _rend
     {
-        template<class C> _NODISCARD constexpr auto operator()(C&& _reverse_iterable) const noexcept -> decltype(container::rend(static_cast<C&&>(_reverse_iterable)))
-        {
+        template<class C> _NODISCARD constexpr auto operator()(C&& _reverse_iterable) const noexcept -> decltype(container::rend(static_cast<C&&>(_reverse_iterable))) {
             return container::rend(static_cast<C&&>(_reverse_iterable));
         }
     };
@@ -308,8 +300,7 @@ public:
 
     struct _data
     {
-        template<class C> _NODISCARD constexpr auto operator()(C&& _data_availability) const noexcept -> decltype(container::data(static_cast<C&&>(_data_availability)))
-        {
+        template<class C> _NODISCARD constexpr auto operator()(C&& _data_availability) const noexcept -> decltype(container::data(static_cast<C&&>(_data_availability))) {
             return container::data(static_cast<C&&>(_data_availability));
         }
     };
@@ -318,8 +309,7 @@ public:
 
     struct _size
     {
-        template<class C> _NODISCARD constexpr auto operator()(C&& _sizeable) const noexcept -> decltype(container::size(static_cast<C&&>(_sizeable)))
-        {
+        template<class C> _NODISCARD constexpr auto operator()(C&& _sizeable) const noexcept -> decltype(container::size(static_cast<C&&>(_sizeable))) {
             return container::size(static_cast<C&&>(_sizeable));
         }
     };
@@ -327,24 +317,26 @@ public:
     constexpr _INLINE_VAR static _size size2{};
 
 public:
+    template<class List, class V, type_if<int, !back_pushable_v<V, List&>> = 0>
+    constexpr static auto push_back(V&& value, List& list)
+        -> decltype(list.push_back(static_cast<V&&>(value))) {
+        return list.push_back(static_cast<V&&>(value));
+    }
+
+    template<class List, class V, type_if<int, !front_pushable_v<V, List&>> = 0>
+    constexpr static auto push_front(V&& value, List& list)
+        -> decltype(list.push_front(static_cast<V&&>(value))) {
+        return list.push_front(static_cast<V&&>(value));
+    }
+
     template<class List, class... Args> constexpr static auto push_back(List& list, Args&&... args)
         -> decltype(list.push_back(static_cast<Args&&>(args)...)) {
         return list.push_back(static_cast<Args&&>(args)...);
     }
 
-    template<class List, class V> constexpr static auto push_back(V&& value, List& list)
-        -> decltype(list.push_back(static_cast<V&&>(value))) {
-        return list.push_back(static_cast<V&&>(value));
-    }
-
     template<class List, class... Args> constexpr static auto push_front(List& list, Args&&... args)
         -> decltype(list.push_front(static_cast<Args&&>(args)...)) {
         return list.push_front(static_cast<Args&&>(args)...);
-    }
-
-    template<class List, class V> constexpr static auto push_front(V&& value, List& list)
-        -> decltype(list.push_front(static_cast<V&&>(value))) {
-        return list.push_front(static_cast<V&&>(value));
     }
 
     template<class List, class... Args> constexpr static auto insert(List& list, Args&&... args)
@@ -374,20 +366,20 @@ public:
     template<> struct _push_back<void>
     {
         template<class Container, class... Args> constexpr auto operator()(Container& container, Args&&... args) const
-            -> decltype(container.push_back(static_cast<Args&&>(args)...))
-        {
+            -> decltype(container.push_back(static_cast<Args&&>(args)...)) {
             return container.push_back(static_cast<Args&&>(args)...);
         }
     };
     template<class Container = void> struct _push_back : private _push_back<void>
     {
+        Container& container;
+
         constexpr _push_back(Container& container) noexcept : container(container) {}
+
         template<class... Args> constexpr auto operator()(Args&&... args)
-            -> decltype(_push_back<void>::operator()(std::declval<Container&>(), static_cast<Args&&>(args)...))
-        {
+            -> decltype(_push_back<void>::operator()(container, static_cast<Args&&>(args)...)) {
             return _push_back<void>::operator()(container, static_cast<Args&&>(args)...);
         }
-        Container& container;
     };
 
     constexpr _INLINE_VAR static _push_back<> push_back2{};
@@ -406,13 +398,14 @@ public:
     };
     template<class Container = void> struct _push_front : private _push_front<void>
     {
+        Container& container;
+
         constexpr _push_front(Container& container) noexcept : container(container) {}
+
         template<class... Args> constexpr auto operator()(Args&&... args)
-            -> decltype(_push_front<void>::operator()(std::declval<Container&>(), static_cast<Args&&>(args)...))
-        {
+            -> decltype(_push_front<void>::operator()(container, static_cast<Args&&>(args)...)) {
             return _push_front<void>::operator()(container, static_cast<Args&&>(args)...);
         }
-        Container& container;
     };
 
     constexpr _INLINE_VAR static _push_front<> push_front2{};
@@ -424,21 +417,20 @@ public:
     template<> struct _insert<void>
     {
         template<class Container, class... Args> constexpr auto operator()(Container& container, Args&&... args) const
-            -> decltype(container.insert(static_cast<Args&&>(args)...))
-        {
+            -> decltype(container.insert(static_cast<Args&&>(args)...)) {
             return container.insert(static_cast<Args&&>(args)...);
         }
     };
     template<class Container = void> struct _insert : private _insert<void>
     {
+        Container& container;
+
         constexpr _insert(Container& container) noexcept : container(container) {}
+
         template<class... Args> constexpr auto operator()(Args&&... args)
-            -> decltype(_insert<void>::operator()(std::declval<Container&>(), static_cast<Args&&>(args)...))
-        {
+            -> decltype(_insert<void>::operator()(container, static_cast<Args&&>(args)...)) {
             return _insert<void>::operator()(container, static_cast<Args&&>(args)...);
         }
-
-        Container& container;
     };
 
     constexpr _INLINE_VAR static _insert<> insert2{};
@@ -446,19 +438,19 @@ public:
 public:
     template<class Container = void> struct _emplace_back
     {
+        Container& container;
+
         constexpr _emplace_back(Container& container) noexcept : container(container) {}
+
         template<class... Args> constexpr auto operator()(Args&&... args)
-            -> decltype(std::declval<Container>().emplace_back(static_cast<Args&&>(args)...))
-        {
+            -> decltype(container.emplace_back(static_cast<Args&&>(args)...)) {
             return container.emplace_back(static_cast<Args&&>(args)...);
         }
-        Container& container;
     };
     template<> struct _emplace_back<void>
     {
         template<class Container, class... Args> constexpr auto operator()(Container& container, Args&&... args) const
-            -> decltype(container.emplace_back(static_cast<Args&&>(args)...))
-        {
+            -> decltype(container.emplace_back(static_cast<Args&&>(args)...)) {
             return container.emplace_back(static_cast<Args&&>(args)...);
         }
     };
@@ -468,19 +460,19 @@ public:
 public:
     template<class Container = void> struct _emplace_front
     {
+        Container& container;
+
         constexpr _emplace_front(Container& container) noexcept : container(container) {}
+
         template<class... Args> constexpr auto operator()(Args&&... args)
-            -> decltype(std::declval<Container>().emplace_front(static_cast<Args&&>(args)...))
-        {
+            -> decltype(container.emplace_front(static_cast<Args&&>(args)...)) {
             return container.emplace_front(static_cast<Args&&>(args)...);
         }
-        Container& container;
     };
     template<> struct _emplace_front<void>
     {
         template<class Container, class... Args> constexpr auto operator()(Container& container, Args&&... args) const
-            -> decltype(container.emplace_front(static_cast<Args&&>(args)...))
-        {
+            -> decltype(container.emplace_front(static_cast<Args&&>(args)...)) {
             return container.emplace_front(static_cast<Args&&>(args)...);
         }
     };
@@ -490,19 +482,19 @@ public:
 public:
     template<class Container = void> struct _emplace
     {
+        Container& container;
+
         constexpr _emplace(Container& container) noexcept : container(container) {}
+
         template<class... Args> constexpr auto operator()(Args&&... args)
-            -> decltype(std::declval<Container>().emplace(static_cast<Args&&>(args)...))
-        {
+            -> decltype(container.emplace(static_cast<Args&&>(args)...)) {
             return container.emplace(static_cast<Args&&>(args)...);
         }
-        Container& container;
     };
     template<> struct _emplace<void>
     {
         template<class Container, class... Args> constexpr auto operator()(Container& container, Args&&... args) const
-            -> decltype(container.emplace(static_cast<Args&&>(args)...))
-        {
+            -> decltype(container.emplace(static_cast<Args&&>(args)...)) {
             return container.emplace(static_cast<Args&&>(args)...);
         }
     };
@@ -512,19 +504,19 @@ public:
 public:
     template<class Container = void> struct _insert_after
     {
+        Container& container;
+
         constexpr _insert_after(Container& container) noexcept : container(container) {}
+
         template<class... Args> constexpr auto operator()(Args&&... args)
-            -> decltype(std::declval<Container>().insert_after(static_cast<Args&&>(args)...))
-        {
+            -> decltype(container.insert_after(static_cast<Args&&>(args)...)) {
             return container.insert_after(static_cast<Args&&>(args)...);
         }
-        Container& container;
     };
     template<> struct _insert_after<void>
     {
         template<class Container, class... Args> constexpr auto operator()(Container& container, Args&&... args) const
-            -> decltype(container.insert_after(static_cast<Args&&>(args)...))
-        {
+            -> decltype(container.insert_after(static_cast<Args&&>(args)...)) {
             return container.insert_after(static_cast<Args&&>(args)...);
         }
     };
@@ -534,19 +526,19 @@ public:
 public:
     template<class Container = void> struct _emplace_after
     {
+        Container& container;
+
         constexpr _emplace_after(Container& container) noexcept : container(container) {}
+
         template<class... Args> constexpr auto operator()(Args&&... args)
-            -> decltype(std::declval<Container>().emplace_after(static_cast<Args&&>(args)...))
-        {
+            -> decltype(container.emplace_after(static_cast<Args&&>(args)...)) {
             return container.emplace_after(static_cast<Args&&>(args)...);
         }
-        Container& container;
     };
     template<> struct _emplace_after<void>
     {
         template<class Container, class... Args> constexpr auto operator()(Container& container, Args&&... args) const
-            -> decltype(container.emplace_after(static_cast<Args&&>(args)...))
-        {
+            -> decltype(container.emplace_after(static_cast<Args&&>(args)...)) {
             return container.emplace_after(static_cast<Args&&>(args)...);
         }
     };
@@ -554,43 +546,35 @@ public:
     constexpr _INLINE_VAR static _emplace_after<> emplace_after2{};
 
 public:
-    template<class Container> constexpr static _push_back<Container> back_pusher(Container& container) noexcept
-    {
+    template<class Container> constexpr static _push_back<Container> back_pusher(Container& container) noexcept {
         return { container };
     }
 
-    template<class Container> constexpr static _push_front<Container> front_pusher(Container& container) noexcept
-    {
+    template<class Container> constexpr static _push_front<Container> front_pusher(Container& container) noexcept {
         return { container };
     }
 
-    template<class Container> constexpr static _insert<Container> inserter(Container& container) noexcept
-    {
+    template<class Container> constexpr static _insert<Container> inserter(Container& container) noexcept {
         return { container };
     }
 
-    template<class Container> constexpr static _emplace_back<Container> back_emplacer(Container& container) noexcept
-    {
+    template<class Container> constexpr static _emplace_back<Container> back_emplacer(Container& container) noexcept {
         return { container };
     }
 
-    template<class Container> constexpr static _emplace_front<Container> front_emplacer(Container& container) noexcept
-    {
+    template<class Container> constexpr static _emplace_front<Container> front_emplacer(Container& container) noexcept {
         return { container };
     }
 
-    template<class Container> constexpr static _emplace<Container> emplacer(Container& container) noexcept
-    {
+    template<class Container> constexpr static _emplace<Container> emplacer(Container& container) noexcept {
         return { container };
     }
 
-    template<class Container> constexpr static _insert_after<Container> after_inserter(Container& container) noexcept
-    {
+    template<class Container> constexpr static _insert_after<Container> after_inserter(Container& container) noexcept {
         return { container };
     }
 
-    template<class Container> constexpr static _emplace_after<Container> after_emplacer(Container& container) noexcept
-    {
+    template<class Container> constexpr static _emplace_after<Container> after_emplacer(Container& container) noexcept {
         return { container };
     }
 
@@ -598,45 +582,41 @@ public:
 
     template<class C> struct _inserter
     {
+        C& container;
+        iterator<C> pos;
+
         constexpr _inserter(C& container, iterator<C> pos) noexcept
-            : container(container), pos(pos)
-        {}
+            : container(container), pos(pos) {
+        }
 
         template<class... Args> constexpr auto operator()(Args&&... args)
-            -> decltype(std::declval<C>().insert(std::declval<iterator<C>>(), std::declval<Args>()...))
-        {
+            -> type_if<iterator<C>, convertible_v<decltype(container.insert(pos, static_cast<Args&&>(args)...)), iterator<C>>> {
             pos = container.insert(pos, static_cast<Args&&>(args)...);
             return pos;
         }
-
-        C& container;
-        iterator<C> pos;
     };
 
-    template<class C> constexpr static _inserter<C> inserter(C& container, iterator<C> pos) noexcept
-    {
+    template<class C> constexpr static _inserter<C> inserter(C& container, iterator<C> pos) noexcept {
         return { container, pos };
     }
 
     template<class C> struct _emplacer
     {
+        C& container;
+        iterator<C> pos;
+
         constexpr _emplacer(C& container, iterator<C> pos) noexcept
-            : container(container), pos(pos)
-        {}
+            : container(container), pos(pos) {
+        }
 
         template<class... Args> constexpr auto operator()(Args&&... args)
-            -> decltype(std::declval<C>().emplace(std::declval<iterator<C>>(), std::declval<Args>()...))
-        {
+            -> type_if<iterator<C>, convertible_v<decltype(container.emplace(pos, static_cast<Args&&>(args)...)), iterator<C>>> {
             pos = container.emplace(pos, static_cast<Args&&>(args)...);
             return pos;
         }
-
-        C& container;
-        iterator<C> pos;
     };
 
-    template<class C> constexpr static _emplacer<C> emplacer(C& container, iterator<C> pos) noexcept
-    {
+    template<class C> constexpr static _emplacer<C> emplacer(C& container, iterator<C> pos) noexcept {
         return { container, pos };
     }
 
@@ -644,45 +624,41 @@ public:
 
     template<class C> struct _after_inserter
     {
+        C& container;
+        iterator<C> pos;
+
         constexpr _after_inserter(C& container, iterator<C> pos) noexcept
-            : container(container), pos(pos)
-        {}
+            : container(container), pos(pos) {
+        }
 
         template<class... Args> constexpr auto operator()(Args&&... args)
-            -> decltype(std::declval<C>().insert_after(std::declval<iterator<C>>(), std::declval<Args>()...))
-        {
+            -> type_if<iterator<C>, convertible_v<decltype(container.insert_after(pos, static_cast<Args&&>(args)...)), iterator<C>>> {
             pos = container.insert_after(pos, static_cast<Args&&>(args)...);
             return pos;
         }
-
-        C& container;
-        iterator<C> pos;
     };
 
-    template<class C> constexpr static _after_inserter<C> after_inserter(C& container, iterator<C> pos) noexcept
-    {
+    template<class C> constexpr static _after_inserter<C> after_inserter(C& container, iterator<C> pos) noexcept {
         return { container, pos };
     }
 
     template<class C> struct _after_emplacer
     {
+        C& container;
+        iterator<C> pos;
+
         constexpr _after_emplacer(C& container, iterator<C> pos) noexcept
-            : container(container), pos(pos)
-        {}
+            : container(container), pos(pos) {
+        }
 
         template<class... Args> constexpr auto operator()(Args&&... args)
-            -> decltype(std::declval<C>().emplace_after(std::declval<iterator<C>>(), std::declval<Args>()...))
-        {
+            -> type_if<iterator<C>, convertible_v<decltype(container.emplace_after(pos, static_cast<Args&&>(args)...)), iterator<C>>> {
             pos = container.emplace_after(pos, static_cast<Args&&>(args)...);
             return pos;
         }
-
-        C& container;
-        iterator<C> pos;
     };
 
-    template<class C> constexpr static _after_emplacer<C> after_emplacer(C& container, iterator<C> pos) noexcept
-    {
+    template<class C> constexpr static _after_emplacer<C> after_emplacer(C& container, iterator<C> pos) noexcept {
         return { container, pos };
     }
 

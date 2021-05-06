@@ -122,10 +122,10 @@ struct comporator2
 {
 protected:
 	template<class L, class R> static sfinae<decltype(std::declval<L>() <=> std::declval<R>())> _comporable(int);
-	template<class, class> static std::false_type _comporable(...);
+	template<class, class> static false_type _comporable(...);
 
 public:
-	template<class L, class R> _INLINE_VAR constexpr static bool comporable_v =
+	template<class L, class R> constexpr _INLINE_VAR static bool comporable_v =
 		decltype(_comporable<L, R>(0))::value;
 
 	template<class L, class R> constexpr auto operator()(L&& l, R&& r) const

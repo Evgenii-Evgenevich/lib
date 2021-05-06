@@ -115,7 +115,7 @@ struct objects
 
 protected:
 	template<class T> constexpr static std::is_unsigned<T> _is_unsigned(int);
-	template<class> constexpr static std::false_type _is_unsigned(...);
+	template<class> constexpr static false_type _is_unsigned(...);
 
 public:
 	template<class T> struct is_unsigned : decltype(_is_unsigned<T>(0)) {};
@@ -203,7 +203,7 @@ protected:
 		decltype(std::is_gteq(std::declval<T>()))
 	> _is_ordering(long);
 #endif // _HAS_CXX20
-	template<class> constexpr static std::false_type _is_ordering(...);
+	template<class> constexpr static false_type _is_ordering(...);
 
 public:
 	template<class T> struct is_ordering : decltype(_is_ordering<T>(0)) {};
