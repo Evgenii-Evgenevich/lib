@@ -5,6 +5,8 @@
 #include "tree_node.hpp"
 #include "singly_linked_node.hpp"
 #include "front_linked_list.hpp"
+#include <forward_list>
+#include <set>
 
 
 struct CMakeProject1
@@ -70,6 +72,12 @@ private:
 
 int main()
 {
+	{
+		auto q123 = { 1,2,3 };
+
+		container::foreach(q123, println);
+	}
+
 	optional<int> oi;
 
 	bool bbb;
@@ -119,6 +127,8 @@ int main()
 
 	util::invoke(gdsfs, m[0]);
 
+	container::foreach(m, gdsfs);
+
 	auto m0_sum = util::member_ptr(&CMakeProject1::_sum, m[0]);
 
 	auto m0_sum_res = util::member_ptr(&CMakeProject1::_sum_res, (CMakeProject1*)m);
@@ -136,7 +146,7 @@ int main()
 	array<float, 3> f(1, 22, 4);
 
 	float sf = 0;
-	f.foreach(m0_sum, sf);
+	container::rforeach(f, m0_sum, sf);
 
 	std::cout << std::endl;
 	std::cout << std::endl;
@@ -173,21 +183,37 @@ int main()
 
 	decltype(treenode)::remove(f9t.first);
 
-	decltype(treenode)::remove(treenode.find(4));
+	decltype(treenode)::remove(treenode.find(1));
+
+	std::set<int> set;
+
+	treenode.foreach(container::inserter(set));
+
+	container::insert2(set, f);
 
 	std::cout << std::endl;
 	std::cout << std::endl;
-	std::cout << "treenode";
+	std::cout << "set";
 	std::cout << std::endl;
 
-	treenode.foreach(println);
+	container::foreach(set, println);
 
-	front_linked_list<int> fll;
+	std::forward_list<int> front{};
 
-	for (auto i = fll.begin(); i != fll.end(); ++i)
-	{
+	treenode.foreach(container::after_emplacer(front, front.before_begin()));
 
-	}
+	auto f_insert_after = container::insert_after2(front, front.before_begin(), f);
+
+	f_insert_after = container::insert_after2(front, f_insert_after, sf);
+
+	std::cout << std::endl;
+	std::cout << std::endl;
+	std::cout << "front";
+	std::cout << std::endl;
+
+	container::foreach(front, println);
+
+	front_linked_list<int> fll = front;
 
 	sizeof singly_linked_node<void, void>;
 

@@ -9,8 +9,7 @@
 template<class> struct front_linked_list;
 
 template<class T>
-struct front_linked_list
-{
+struct front_linked_list {
     using node = singly_linked_node<T>;
 
     using value_type = T;
@@ -135,70 +134,62 @@ struct front_linked_list
 
     template<class... Args>
     type_if<reference, is_constructible_v<T, Args...>> emplace_front(Args&&... args) {
-        node* first = this->_emplace_after(&m_before_first, static_cast<Args&&>(args)...);
+        node* first = this->_emplace_after(m_before_first, static_cast<Args&&>(args)...);
         return first->value();
     }
 
     template<class... Args>
     type_if<iterator, is_constructible_v<T, Args...>> emplace_after(const_iterator pos, Args&&... args) {
         node* after = const_cast<node*>(pos.cur);
-        return after == nullptr ? nullptr : this->_emplace_after(after, static_cast<Args&&>(args)...);
+        return after == nullptr ? nullptr : this->_emplace_after(*after, static_cast<Args&&>(args)...);
     }
 
     template<class Arg = const_reference, class... Args>
     type_if<iterator, is_constructible_from_each_v<T, Arg, Args...>> insert_after(const_iterator pos, Arg&& arg, Args&&... args) {
         node* after = const_cast<node*>(pos.cur);
-        if (after == nullptr) return nullptr;
-        this->_insert_after_args(after, static_cast<Arg&&>(arg), static_cast<Args&&>(args)...);
-        return after->next();
+        return after == nullptr ? nullptr : this->_insert_after_args(after, static_cast<Arg&&>(arg), static_cast<Args&&>(args)...);
     }
 
     template<class I>
-    auto insert_after(const_iterator pos, I first, I last) -> type_if<iterator, is_constructible_v<T, decltype(*first)>> {
+    auto insert_after(const_iterator pos, I first, I last)
+        -> type_if<iterator, iterators::fwd_iter_v<I>, is_constructible_v<T, decltype(*first)>> {
         node* after = const_cast<node*>(pos.cur);
-        if (after == nullptr) return nullptr;
-        this->_insert_after_iter(after, first, last);
-        return after->next();
+        return after == nullptr ? nullptr : this->_insert_after_iter(after, first, last);
     }
 
     template<class C, type_if<int, !is_constructible_v<T, C const&>, !container::foreachable_v<C>, container::iterable_v<C>, is_constructible_v<T, container::const_reference<C>>> = 0>
     iterator insert_after(const_iterator pos, C const& iterable) {
         node* after = const_cast<node*>(pos.cur);
-        if (after == nullptr) return nullptr;
-        this->_insert_after_iter(after, container::begin(iterable), container::end(iterable));
-        return after->next();
+        return after == nullptr ? nullptr : this->_insert_after_iter(after, container::begin(iterable), container::end(iterable));
     }
 
     template<class C, type_if<int, !is_constructible_v<T, C const&>, container::foreachable_v<C>, is_constructible_v<T, container::const_reference<C>>> = 0>
     iterator insert_after(const_iterator pos, C const& foreachable) {
         node* after = const_cast<node*>(pos.cur);
         if (after == nullptr) return nullptr;
-        foreachable.foreach(_insert_after_e(after));
-        return after->next();
+        _insert_after inserter{ *this, after };
+        foreachable.foreach(inserter);
+        return inserter.after;
     }
 
     type_if<iterator, is_constructible_v<T>> insert_after_n_copies(const_iterator pos, size_type n) {
         node* after = const_cast<node*>(pos.cur);
-        if (after == nullptr) return nullptr;
-        this->_insert_after_n_copies(after, n);
-        return after->next();
+        return after == nullptr ? nullptr : this->_insert_after_n_copies(after, n);
     }
 
     template<class V = T>
     type_if<iterator, is_constructible_v<T, V const&>> insert_after_n_copies(const_iterator pos, size_type n, V const& value) {
         node* after = const_cast<node*>(pos.cur);
-        if (after == nullptr) return nullptr;
-        this->_insert_after_n_copies(after, n, value);
-        return after->next();
+        return after == nullptr ? nullptr : this->_insert_after_n_copies(after, n, value);
     }
 
     iterator erase_after(const_iterator pos) noexcept {
         if (pos == cend())
             return end();
 
-        node* after = const_cast<node*>(pos.cur);
+        node& after = *const_cast<node*>(pos.cur);
         this->_remove_after(after);
-        return after->next();
+        return after.next();
     }
 
     iterator erase_after(const_iterator first, const_iterator last) noexcept {
@@ -207,45 +198,42 @@ struct front_linked_list
 
     template<class Arg = const_reference, class... Args>
     type_if<iterator, is_constructible_from_each_v<T, Arg, Args...>> push_front(Arg&& arg, Args&&... args) {
-        this->_insert_after_args(&m_before_first, static_cast<Arg&&>(arg), static_cast<Args&&>(args)...);
-        return _first();
+        return this->_insert_after_args(&m_before_first, static_cast<Arg&&>(arg), static_cast<Args&&>(args)...);
     }
 
     template<class I>
-    auto push_front(I first, I last) -> type_if<iterator, is_constructible_v<T, decltype(*first)>> {
-        this->_insert_after_iter(&m_before_first, first, last);
-        return _first();
+    auto push_front(I first, I last)
+        -> type_if<iterator, iterators::fwd_iter_v<I>, is_constructible_v<T, decltype(*first)>> {
+        return this->_insert_after_iter(&m_before_first, first, last);
     }
 
     template<class C, type_if<int, !is_constructible_v<T, C const&>, container::iterable_v<C>, !container::foreachable_v<C>, is_constructible_v<T, container::const_reference<C>>> = 0>
     iterator push_front(C const& iterable) {
-        this->_insert_after_iter(&m_before_first, container::begin(iterable), container::end(iterable));
-        return _first();
+        return this->_insert_after_iter(&m_before_first, container::begin(iterable), container::end(iterable));
     }
 
     template<class C, type_if<int, !is_constructible_v<T, C const&>, container::foreachable_v<C>, is_constructible_v<T, container::const_reference<C>>> = 0>
     iterator push_front(C const& foreachable) {
-        foreachable.foreach(_insert_after_e(&m_before_first));
-        return _first();
+        _insert_after inserter{ *this, &m_before_first };
+        foreachable.foreach(inserter);
+        return inserter.after;
     }
 
     type_if<iterator, is_constructible_v<T>> push_front_n_copies(size_type n) {
-        this->_insert_after_n_copies(&m_before_first, n);
-        return _first();
+        return this->_insert_after_n_copies(&m_before_first, n);
     }
 
     template<class V = T>
     type_if<iterator, is_constructible_v<T, V const&>> push_front_n_copies(size_type n, V const& value) {
-        this->_insert_after_n_copies(&m_before_first, n, value);
-        return _first();
+        return this->_insert_after_n_copies(&m_before_first, n, value);
     }
 
     std::unique_ptr<node> pop_front() noexcept {
-        return this->_remove_after(&m_before_first);
+        return this->_remove_after(m_before_first);
     }
 
     std::unique_ptr<node> remove_after(const_iterator pos) noexcept {
-        return pos == cend() ? nullptr : this->_remove_after(const_cast<node*>(pos.cur));
+        return pos == cend() ? nullptr : this->_remove_after(*const_cast<node*>(pos.cur));
     }
 
     template<class Pred = std::function<bool(const_reference)>>
@@ -258,10 +246,10 @@ struct front_linked_list
         return m_before_first.remove_all_next_if(static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
     }
 
-    template<class V = const_reference, type_if<int, convertible_v<decltype(std::declval<V>() == std::declval<const_reference>()), bool>> = 0>
+    template<class V = const_reference>
     auto remove(V&& value) noexcept(noexcept(remove_if(std::declval<bool(const_reference)>())))
-        -> decltype(remove_if(std::declval<bool(const_reference)>())) {
-        return remove_if([&value](const_reference cur) { return value == cur; });
+        -> type_if<decltype(remove_if(std::declval<bool(const_reference)>())), convertible_v<decltype(std::declval<V>() == std::declval<const_reference>()), bool>> {
+        return remove_if([&value](const_reference cur)->bool{ return value == cur; });
     }
 
     void reverse() noexcept { m_before_first._reverse(); }
@@ -269,7 +257,7 @@ struct front_linked_list
     _NODISCARD front_linked_list reversed() const {
         front_linked_list reversed;
         for (auto i = cbegin(), end = cend(); i != end; ++i) {
-            (void)reversed.m_before_first._new_next(*i);
+            (void)reversed.push_front(*i);
         }
         return reversed;
     }
@@ -308,59 +296,57 @@ protected:
 
     constexpr node const* _first() const noexcept { return m_before_first.next(); }
 
-    template<class... Args> constexpr node* _emplace_after(node* after, Args&&... args) {
-        return after->_new_next(static_cast<Args&&>(args)...);
+    template<class... Args> constexpr node* _emplace_after(node& after, Args&&... args) {
+        return after._new_next(static_cast<Args&&>(args)...);
     }
 
-    constexpr std::unique_ptr<node> _remove_after(node* after) {
-        return node::unlink_next(after);
+    constexpr std::unique_ptr<node> _remove_after(node& after) {
+        return after.unlink_next();
     }
 
     struct _insert_after {
         template<class V> constexpr void operator()(V&& value) {
-            after = _this._emplace_after(after, static_cast<V&&>(value));
+            after = _this._emplace_after(*after, static_cast<V&&>(value));
         }
         front_linked_list& _this;
         node* after;
     };
 
-    constexpr _insert_after _insert_after_e(node* after) noexcept {
-        return { *this, after };
+    template<class Arg> node* _insert_after_args(node* after, Arg&& arg) {
+        return this->_emplace_after(*after, static_cast<Arg&&>(arg));
+    }
+    template<class Arg, class... Args> node* _insert_after_args(node* after, Arg&& arg, Args&&... args) {
+        after = this->_emplace_after(*after, static_cast<Arg&&>(arg));
+        return this->_insert_after_args(after, static_cast<Args&&>(args)...);
     }
 
-    template<class Arg> void _insert_after_args(node* after, Arg&& arg) {
-        this->_emplace_after(after, static_cast<Arg&&>(arg));
-    }
-    template<class Arg, class... Args> void _insert_after_args(node* after, Arg&& arg, Args&&... args) {
-        after = this->_emplace_after(after, static_cast<Arg&&>(arg));
-        this->_insert_after_args(after, static_cast<Args&&>(args)...);
-    }
-
-    template<class I> inline void _insert_after_iter(node* after, I first, I last) {
+    template<class I> inline node* _insert_after_iter(node* after, I first, I last) {
         for (; first != last; ++first) {
-            after = this->_emplace_after(after, *first);
+            after = this->_emplace_after(*after, *first);
         }
+        return after;
     }
 
-    template<class I, class Filter> inline void _insert_after_iter(node* after, I first, I last, Filter& filter) {
+    template<class I, class Filter> inline node* _insert_after_iter(node* after, I first, I last, Filter& filter) {
         for (; first != last; ++first) {
             auto& value = *first;
-            if (util::invoke(filter, value))
-            {
-                after = this->_emplace_after(after, value);
+            if (util::invoke(filter, value)) {
+                after = this->_emplace_after(*after, value);
             }
         }
+        return after;
     }
 
-    template<class... Args> inline void _insert_after_n_copies(node* after, size_type n, Args&&... args) {
+    template<class... Args> inline node* _insert_after_n_copies(node* after, size_type n, Args&&... args) {
         for (; n != 0; --n) {
-            after = this->_emplace_after(after, static_cast<Args&&>(args)...);
+            after = this->_emplace_after(*after, static_cast<Args&&>(args)...);
         }
+        return after;
     }
 
     inline static node* _erase_after(node* first, node const* const last) noexcept {
         for (; first != last; first = first->next()) {
-            _remove_after(first);
+            _remove_after(*first);
         }
         return first;
     }
