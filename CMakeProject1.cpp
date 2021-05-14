@@ -67,7 +67,16 @@ public:
 	}
 
 private:
-	int i;
+	int i = 13;
+};
+
+struct MyStruct : pair<MyClass, MyClass> {
+	using pair<MyClass, MyClass>::first;
+	using pair<MyClass, MyClass>::second;
+
+	MyStruct() : pair<MyClass, MyClass>(pair<void, void>::dummy) {
+		new(&first) MyClass();
+	}
 };
 
 int main()
@@ -77,6 +86,17 @@ int main()
 
 		container::foreach(q123, println);
 	}
+
+	pair<int, float> pipi{ pair<float, int>{ 3, 4 } };
+
+	MyStruct pp;
+
+	std::cout << std::endl;
+	std::cout << " :0: " << ((int*)(&pp))[0];
+	std::cout << " :1: " << ((int*)(&pp))[1];
+	std::cout << std::endl;
+	std::cout << std::endl;
+
 
 	optional<int> oi;
 
@@ -88,7 +108,7 @@ int main()
 
 	i = (oi.or_default(1) = 3);
 
-	std::cout << i;
+	std::cout << "i " << i;
 	std::cout << std::endl;
 	std::cout << std::endl;
 
@@ -166,7 +186,7 @@ int main()
 	tree_node<int, comporator<>> treenode(nullptr, 5);
 
 	constexpr bool c222 = convertible_v<iterator<int const*>, iterator<int*>>;
-	constexpr bool c333 = convertible_v<iterator<int*>, iterator<int const*>>;
+	constexpr bool c333 = convertible_v<iterator<int*>&, iterator<int const*>&&>;
 
 	//constexpr bool c22 = objects::is_ordering_v<std::strong_ordering>;
 
