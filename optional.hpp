@@ -1,10 +1,16 @@
 #ifndef __OPTIONAL_HPP
 #define __OPTIONAL_HPP 1
 
+#if _HAS_CXX17
+namespace std
+{
+    template<class> class optional;
+}
+#endif // _HAS_CXX17
+
 #include "util.hpp"
 #include "object.hpp"
 #include <memory>
-#include <optional>
 
 template<class...> struct optional
 {
@@ -86,24 +92,24 @@ protected:
         _NODISCARD constexpr T& _ref() noexcept { return m_value; }
         _NODISCARD constexpr T const& _ref() const noexcept { return m_value; }
 
-        _NODISCARD constexpr T* _ptr() noexcept { return &m_value; }
-        _NODISCARD constexpr T const* _ptr() const noexcept { return &m_value; }
+        _NODISCARD constexpr T* _ptr() noexcept { return std::addressof(m_value); }
+        _NODISCARD constexpr T const* _ptr() const noexcept { return std::addressof(m_value); }
 
         template<class V> void _construct(V&& value) noexcept(is_nothrow_constructible_v<T, V&&>) {
             new(&m_value) T(static_cast<V&&>(value));
             m_present = true;
         }
 
-        template<class V> constexpr void _assign(V&& value, std::false_type) noexcept(is_nothrow_constructible_v<T, V&&>) {
+        template<class V> constexpr void _assign(V&& value, false_type) noexcept(is_nothrow_constructible_v<T, V&&>) {
             _reset();
             _construct(static_cast<V&&>(value));
         }
 
-        template<class V> constexpr void _assign(V&& value, std::true_type) noexcept(is_nothrow_constructible_v<T, V&&>&& is_nothrow_assignable_v<T, V&&>) {
+        template<class V> constexpr void _assign(V&& value, true_type) noexcept(is_nothrow_constructible_v<T, V&&>&& is_nothrow_assignable_v<T, V&&>) {
             if (m_present) {
                 m_value = static_cast<V&&>(value);
             } else {
-                _assign(static_cast<V&&>(value), std::false_type);
+                _assign(static_cast<V&&>(value), false_type);
             }
         }
 
@@ -137,9 +143,10 @@ template<class T> struct optional<T> : protected optional<>::_base<T>
         : _base(static_cast<U&&>(value)) {
     }
 
-    template<class U, type_if<int, is_constructible_v<T, U&&>> = 0>
-    constexpr optional(std::unique_ptr<U>&& ptr) noexcept(noexcept(_base::_construct(static_cast<U&&>(*ptr.release())))) {
-        if (ptr) _base::_construct(static_cast<U&&>(*ptr.release()));
+    template<class Dx, type_if<int, is_move_constructible_v<T>> = 0>
+    optional(std::unique_ptr<T, Dx>&& ptr) noexcept(noexcept(_base::_construct(static_cast<T&&>(*ptr)))) {
+        if (ptr) _base::_construct(static_cast<T&&>(*ptr));
+        ptr.reset();
     }
 
     constexpr optional(type_if<optional, is_copy_constructible_v<T>> const& other) noexcept(noexcept(_base::_construct(*other))) {
@@ -235,6 +242,69 @@ protected:
     using _base::m_present;
 
     template<class...> friend struct optional;
+
+#if _HAS_CXX17
+public:
+    constexpr operator std::optional<T>& () & noexcept { return reinterpret_cast<std::optional<T>&>(*this); }
+    constexpr operator std::optional<T> const& () const& noexcept { return reinterpret_cast<std::optional<T> const&>(*this); }
+    constexpr operator std::optional<T> && () && noexcept { return reinterpret_cast<std::optional<T>&&>(*this); }
+    constexpr operator std::optional<T> const&& () const&& noexcept { return reinterpret_cast<std::optional<T> const&&>(*this); }
+#endif // _HAS_CXX17
 };
+
+#if _HAS_CXX17
+template<class T> optional(T const&)->optional<T>;
+template<class T> optional(T&&)->optional<T>;
+#endif // _HAS_CXX17
+
+template<class L> _NODISCARD constexpr bool operator==(optional<L> const& _Left, nullopt_t) noexcept {
+    return !_Left.has_value();
+}
+template<class R> _NODISCARD constexpr bool operator==(nullopt_t, optional<R> const& _Right) noexcept {
+    return !_Right.has_value();
+}
+
+template<class L> _NODISCARD constexpr bool operator!=(optional<L> const& _Left, nullopt_t) noexcept {
+    return _Left.has_value();
+}
+template<class R> _NODISCARD constexpr bool operator!=(nullopt_t, optional<R> const& _Right) noexcept {
+    return _Right.has_value();
+}
+
+template<class L, class R>
+_NODISCARD constexpr auto operator==(optional<L> const& _Left, optional<R> const& _Right) noexcept(noexcept(*_Left == *_Right))
+-> type_if<bool, convertible_v<decltype(*_Left == *_Right), bool>> {
+    bool const _Left_has_value = _Left.has_value();
+    return _Left_has_value == _Right.has_value() && (!_Left_has_value || *_Left == *_Right);
+}
+
+template<class L, class R>
+_NODISCARD constexpr auto operator!=(optional<L> const& _Left, optional<R> const& _Right) noexcept(noexcept(*_Left != *_Right))
+-> type_if<bool, convertible_v<decltype(*_Left != *_Right), bool>> {
+    bool const _Left_has_value = _Left.has_value();
+    return _Left_has_value != _Right.has_value() || (_Left_has_value && *_Left != *_Right);
+}
+
+template<class L, class R>
+_NODISCARD constexpr auto operator==(optional<L> const& _Left, R const& _Right) noexcept(noexcept(*_Left == _Right))
+-> type_if<bool, convertible_v<decltype(*_Left == _Right), bool>> {
+    return _Left ? *_Left == _Right : false;
+}
+template<class L, class R>
+_NODISCARD constexpr auto operator==(L const& _Left, optional<R> const& _Right) noexcept(noexcept(_Left == *_Right))
+-> type_if<bool, convertible_v<decltype(_Left == *_Right), bool>> {
+    return _Right ? _Left == *_Right : false;
+}
+
+template<class L, class R>
+_NODISCARD constexpr auto operator!=(optional<L> const& _Left, R const& _Right) noexcept(noexcept(*_Left != _Right))
+-> type_if<bool, convertible_v<decltype(*_Left != _Right), bool>> {
+    return _Left ? *_Left != _Right : true;
+}
+template<class L, class R>
+_NODISCARD constexpr auto operator!=(L const& _Left, optional<R> const& _Right) noexcept(noexcept(_Left != *_Right))
+-> type_if<bool, convertible_v<decltype(_Left != *_Right), bool>> {
+    return _Right ? _Left != *_Right : true;
+}
 
 #endif // !__OPTIONAL_HPP

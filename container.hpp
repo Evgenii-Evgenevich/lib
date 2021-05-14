@@ -558,7 +558,7 @@ public:
             return container::foreach(s, _emplace<D>{ d });
         }
         template<class C, class... Args> constexpr auto operator()(C& container, iterator<C> pos, Args&&... args) const
-            -> type_if<decltype(_inserter<C>{container, pos}(static_cast<Args&&>(args)...)), !insertable_v<C, iterator<C>, Args... >> {
+            -> type_if<decltype(_inserter<C>{container, pos}(static_cast<Args&&>(args)...)), !insertable_v<C, iterator<C>, Args...>> {
             return _inserter<C>{container, pos}(static_cast<Args&&>(args)...);
         }
     };
