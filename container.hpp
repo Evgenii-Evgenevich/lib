@@ -334,9 +334,9 @@ protected:
 public:
     template<class C, class... Args, class Proc = std::function<void(decl_reference<C>, Args...)>, class Foreach = _o_foreach<remove_ref_t<C>, foreachable_v<C, Proc, Args...>>>
     constexpr static auto foreach(C&& c, Proc&& proc, Args&&... args)
-        noexcept(noexcept(Foreach{}(static_cast<C&&>(c), static_cast<Proc&&>(proc), static_cast<Args&&>(args)...)))
-        -> decltype(Foreach{}(static_cast<C&&>(c), static_cast<Proc&&>(proc), static_cast<Args&&>(args)...)) {
-        return Foreach{}(static_cast<C&&>(c), static_cast<Proc&&>(proc), static_cast<Args&&>(args)...);
+        noexcept(noexcept(Foreach{}(c, proc, static_cast<Args&&>(args)...)))
+        -> decltype(Foreach{}(c, proc, static_cast<Args&&>(args)...)) {
+        return Foreach{}(c, proc, static_cast<Args&&>(args)...);
     }
 
 protected:
@@ -377,9 +377,9 @@ protected:
 public:
     template<class C, class... Args, class Proc = std::function<void(decl_reference<C>, Args...)>, class RForeach = _reverse_foreach<remove_ref_t<C>, reverse_foreachable_v<C, Proc, Args...>>>
     constexpr static auto rforeach(C&& c, Proc&& proc, Args&&... args)
-        noexcept(noexcept(RForeach{}(static_cast<C&&>(c), static_cast<Proc&&>(proc), static_cast<Args&&>(args)...)))
-        -> decltype(RForeach{}(static_cast<C&&>(c), static_cast<Proc&&>(proc), static_cast<Args&&>(args)...)) {
-        return RForeach{}(static_cast<C&&>(c), static_cast<Proc&&>(proc), static_cast<Args&&>(args)...);
+        noexcept(noexcept(RForeach{}(c, proc, static_cast<Args&&>(args)...)))
+        -> decltype(RForeach{}(c, proc, static_cast<Args&&>(args)...)) {
+        return RForeach{}(c, proc, static_cast<Args&&>(args)...);
     }
 
 protected:

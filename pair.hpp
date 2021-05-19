@@ -24,8 +24,11 @@ protected:
 
 	struct _dummy_t {};
 
-	template<class First, class Second>
+	template<class First, class Second, bool = std::is_reference<First>::value || std::is_reference<Second>::value>
 	struct _base {
+		static_assert(!objects::is_polymorphic_v<First>, "requared not polymorphic");
+		static_assert(!objects::is_polymorphic_v<Second>, "requared not polymorphic");
+
 		using first_type = First;
 		using second_type = Second;
 
@@ -87,6 +90,24 @@ protected:
 			objects::destroy(second);
 		}
 	};
+
+	template<class First, class Second>
+	struct _base<First, Second, true> {
+		using first_type = First;
+		using second_type = Second;
+
+		first_type first;
+		second_type second;
+
+		_base(_base const&) = default;
+		_base(_base&&) = default;
+
+		template<class First, class Second, type_if<int, convertible_v<First&&, first_type>, convertible_v<Second&&, second_type>> = 0>
+		constexpr _base(First&& first, Second&& second) noexcept(is_nothrow_constructible_v<first_type, First&&>&& is_nothrow_constructible_v<second_type, Second&&>)
+			: first(static_cast<First&&>(first)), second(static_cast<Second&&>(second)) {
+		}
+	};
+
 public:
 	constexpr _INLINE_VAR static _dummy_t dummy{};
 
@@ -129,7 +150,7 @@ template<class T> struct pair<T, T> : private pair<void, void>::_base<T, T> {
 	constexpr operator array<T, 2> const&& () const&& noexcept { return reinterpret_cast<array<T, 2> const&&>(*this); }
 };
 
-template<class First, class Second> struct pair : protected pair<void, void>::_base<First, Second> {
+template<class First, class Second> struct pair : private pair<void, void>::_base<First, Second> {
 	using first_type = First;
 	using second_type = Second;
 
@@ -152,19 +173,30 @@ template<class First, class Second> struct pair : protected pair<void, void>::_b
 };
 
 #if _HAS_CXX17
-template <class First, class Second>
-pair(First, Second)->pair<First, Second>;
+template<class First, class Second>
+pair(First const&, Second const&)->pair<First, Second>;
 #endif // _HAS_CXX17
 
 template<class LFirst, class LSecond, class RFirst, class RSecond, class = decltype(std::declval<LFirst>() == std::declval<RFirst>()), class = decltype(std::declval<LSecond>() == std::declval<RSecond>())>
-constexpr bool operator==(pair<LFirst, LSecond> const& _Left, pair<RFirst, RSecond> const& _Right) noexcept {
+constexpr bool operator==(pair<LFirst, LSecond> const& _Left, pair<RFirst, RSecond> const& _Right) noexcept(
+	noexcept(std::declval<LFirst>() == std::declval<RFirst>()) && noexcept(std::declval<LSecond>() == std::declval<RSecond>())) {
 	return _Left.first == _Right.first && _Left.second == _Right.second;
 }
 
 template<class LFirst, class LSecond, class RFirst, class RSecond, class = decltype(std::declval<LFirst>() != std::declval<RFirst>()), class = decltype(std::declval<LSecond>() != std::declval<RSecond>())>
-constexpr bool operator!=(pair<LFirst, LSecond> const& _Left, pair<RFirst, RSecond> const& _Right) noexcept {
+constexpr bool operator!=(pair<LFirst, LSecond> const& _Left, pair<RFirst, RSecond> const& _Right) noexcept(
+	noexcept(std::declval<LFirst>() != std::declval<RFirst>()) && noexcept(std::declval<LSecond>() != std::declval<RSecond>())) {
 	return _Left.first != _Right.first || _Left.second != _Right.second;
 }
+
+#if _HAS_CXX20
+template<class LFirst, class LSecond, class RFirst, class RSecond, class = decltype(std::declval<LFirst>() <=> std::declval<RFirst>()), class = decltype(std::declval<LSecond>() <=> std::declval<RSecond>())>
+constexpr std::partial_ordering operator<=>(pair<LFirst, LSecond> const& _Left, pair<RFirst, RSecond> const& _Right) noexcept(
+	noexcept(std::declval<LFirst>() <=> std::declval<RFirst>()) && noexcept(std::declval<LSecond>() <=> std::declval<RSecond>())) {
+	auto const first_ord = _Left.first <=> _Right.first;
+	return first_ord == 0 ? _Left.second <=> _Right.second : first_ord;
+}
+#endif // _HAS_CXX20
 
 namespace std
 {

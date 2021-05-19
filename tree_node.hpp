@@ -230,7 +230,7 @@ public:
 	static auto insert(nodeptr node, V&& value)
 		-> decltype(_insert(std::declval<nodeptr&>(), node, static_cast<V&&>(value)))
 	{
-		auto const c = node->compare(static_cast<V&&>(value));
+		auto const c = node->lcompare(static_cast<V&&>(value));
 
 		if (c == 0)
 			return { node, false };
@@ -243,7 +243,7 @@ public:
 		if (node == nullptr)
 			return nullptr;
 
-		auto const c = node->compare(static_cast<V&&>(value));
+		auto const c = node->lcompare(static_cast<V&&>(value));
 
 		if (c == 0)
 			return node;
@@ -256,7 +256,7 @@ public:
 		if (node == nullptr)
 			return nullptr;
 
-		auto const c = node->compare(static_cast<V&&>(value));
+		auto const c = node->lcompare(static_cast<V&&>(value));
 
 		if (c == 0)
 			return const_cast<nodeptr>(node);
@@ -265,12 +265,12 @@ public:
 	}
 
 	template<class V = T const&>
-	constexpr util::invoke_result_t<Comparator, V&&, T const&> compare(V&& left) noexcept(nothrow_comporable_v<V>) {
+	constexpr util::invoke_result_t<Comparator, V&&, T const&> lcompare(V&& left) noexcept(nothrow_comporable_v<V>) {
 		return util::invoke(static_cast<Comparator&>(*this), static_cast<V&&>(left), value());
 	}
 
 	template<class V = T const&>
-	constexpr util::invoke_result_t<Comparator const, V&&, T const&> compare(V&& left) const noexcept(nothrow_const_comporable_v<V>) {
+	constexpr util::invoke_result_t<Comparator const, V&&, T const&> lcompare(V&& left) const noexcept(nothrow_const_comporable_v<V>) {
 		return util::invoke(static_cast<Comparator const&>(*this), static_cast<V&&>(left), value());
 	}
 

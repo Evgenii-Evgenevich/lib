@@ -186,6 +186,7 @@ public:
 protected:
 	template<class T> constexpr static conjunction<
 		!is_unsigned_v<T>,
+		sfinae_v<decltype(T{ -1 }), decltype(T{ 0 }), decltype(T{ 1 })>,
 		convertible_v<decltype(std::declval<T>() == 0), bool>,
 		convertible_v<decltype(std::declval<T>() != 0), bool>,
 		convertible_v<decltype(std::declval<T>() < 0), bool>,
@@ -193,16 +194,6 @@ protected:
 		convertible_v<decltype(std::declval<T>() > 0), bool>,
 		convertible_v<decltype(std::declval<T>() >= 0), bool>
 	> _is_ordering(int);
-#if _HAS_CXX20
-	template<class T> constexpr static sfinae<
-		decltype(std::is_eq(std::declval<T>())),
-		decltype(std::is_neq(std::declval<T>())),
-		decltype(std::is_lt(std::declval<T>())),
-		decltype(std::is_lteq(std::declval<T>())),
-		decltype(std::is_gt(std::declval<T>())),
-		decltype(std::is_gteq(std::declval<T>()))
-	> _is_ordering(long);
-#endif // _HAS_CXX20
 	template<class> constexpr static false_type _is_ordering(...);
 
 public:

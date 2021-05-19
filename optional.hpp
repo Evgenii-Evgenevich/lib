@@ -49,7 +49,7 @@ protected:
         }
 
         ~_data_base() noexcept {
-            _reset();
+            objects::destroy(m_value);
         }
 
         void _reset() noexcept {
@@ -238,6 +238,18 @@ template<class T> struct optional<T> : protected optional<>::_base<T>
         return has_value() ? value() : deflt;
     }
 
+    template<class Comp = default_comporator, class U, class Ord = util::invoke_result_t<default_comporator, T const&, U const&>>
+    constexpr type_if<Ord, objects::is_ordering_v<Ord>> compare(optional<U> const& right, Comp&& comp = Comp{}) const
+        noexcept(util::nothrow_invocable_v<default_comporator, T const&, U const&>) {
+        return has_value() ? (right ? util::invoke(static_cast<Comp&&>(comp), value(), *right) : Ord{1}) : (right ? Ord{-1} : Ord{0});
+    }
+
+    template<class Comp = default_comporator, class V, class Ord = util::invoke_result_t<default_comporator, T const&, V&&>>
+    constexpr type_if<Ord, objects::is_ordering_v<Ord>> compare(V&& right, Comp&& comp = Comp{}) const
+        noexcept(util::nothrow_invocable_v<default_comporator, T const&, V&&>) {
+        return has_value() ? util::invoke(static_cast<Comp&&>(comp), value(), static_cast<V&&>(right)) : Ord{-1};
+    }
+
 protected:
     using _base::m_present;
 
@@ -255,6 +267,7 @@ public:
 #if _HAS_CXX17
 template<class T> optional(T const&)->optional<T>;
 template<class T> optional(T&&)->optional<T>;
+optional(optional<>)->optional<>;
 #endif // _HAS_CXX17
 
 template<class L> _NODISCARD constexpr bool operator==(optional<L> const& _Left, nullopt_t) noexcept {
@@ -306,5 +319,33 @@ _NODISCARD constexpr auto operator!=(L const& _Left, optional<R> const& _Right) 
 -> type_if<bool, convertible_v<decltype(_Left != *_Right), bool>> {
     return _Right ? _Left != *_Right : true;
 }
+
+#if _HAS_CXX20
+_NODISCARD constexpr std::strong_ordering operator<=>(nullopt_t, nullopt_t) noexcept {
+    return std::strong_ordering::equal;
+}
+template<class L> _NODISCARD constexpr std::strong_ordering operator<=>(optional<L> const& _Left, nullopt_t) noexcept {
+    return _Left ? std::strong_ordering::greater : std::strong_ordering::equal;
+}
+template<class R> _NODISCARD constexpr std::strong_ordering operator<=>(nullopt_t, optional<R> const& _Right) noexcept {
+    return _Right ? std::strong_ordering::less : std::strong_ordering::equal;
+}
+
+template<class L, class R, class Ord = decltype(std::declval<L const&>() <=> std::declval<R const&>())>
+_NODISCARD constexpr auto operator<=>(optional<L> const& _Left, optional<R> const& _Right) noexcept
+-> decltype(*_Left <=> *_Right) {
+    return _Left ? (_Right ? *_Left <=> *_Right : Ord{1}) : (_Right ? Ord{-1} : Ord{0});
+}
+template<class L, class R, class Ord = decltype(std::declval<L const&>() <=> std::declval<R const&>())>
+_NODISCARD constexpr auto operator<=>(optional<L> const& _Left, R const& _Right) noexcept
+-> decltype(*_Left <=> _Right) {
+    return _Left ? *_Left <=> _Right : Ord{-1};
+}
+template<class L, class R, class Ord = decltype(std::declval<L const&>() <=> std::declval<R const&>())>
+_NODISCARD constexpr auto operator<=>(L const& _Left, optional<R> const& _Right) noexcept
+-> decltype(_Left <=> *_Right) {
+    return _Right ? _Left <=> *_Right : Ord{1};
+}
+#endif // _HAS_CXX20
 
 #endif // !__OPTIONAL_HPP

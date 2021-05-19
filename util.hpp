@@ -3,20 +3,17 @@
 
 #include "types.hpp"
 
-struct util
-{
+struct util {
 protected:
-	template<class...> struct _invoker
-	{
-		template<class F, class... Args> constexpr auto operator()(F&& f, Args&&... args)
+	template<class...> struct _invoker {
+		template<class F, class... Args> constexpr auto operator()(F&& f, Args&&... args) const
 			noexcept(noexcept(static_cast<F&&>(f)(static_cast<Args&&>(args)...)))
 			-> decltype(static_cast<F&&>(f)(static_cast<Args&&>(args)...)) {
 			return static_cast<F&&>(f)(static_cast<Args&&>(args)...);
 		}
 	};
 
-	template<class R, class Base, class Arg, class... Args> struct _invoker<R Base::*, Arg, Args...>
-	{
+	template<class R, class Base, class Arg, class... Args> struct _invoker<R Base::*, Arg, Args...> {
 		constexpr _INLINE_VAR static bool is_member_function_pointer_v = std::is_member_function_pointer<R Base::*>::value;
 		constexpr _INLINE_VAR static bool is_member_object_pointer_v = std::is_member_object_pointer<R Base::*>::value;
 
@@ -37,16 +34,14 @@ protected:
 			return static_cast<Arg&&>(arg).get();
 		}
 
-		template<type_if<int, is_member_function_pointer_v> = 0>
-		constexpr auto operator()(R Base::* fun, Arg&& arg, Args&&... args)
+		constexpr auto operator()(R Base::* fun, Arg&& arg, Args&&... args) const
 			noexcept(noexcept(_invoker::get(static_cast<Arg&&>(arg)).*fun)(static_cast<Args&&>(args)...))
-			-> decltype((_invoker::get(static_cast<Arg&&>(arg)).*fun)(static_cast<Args&&>(args)...)) {
+			-> type_if<decltype((_invoker::get(static_cast<Arg&&>(arg)).*fun)(static_cast<Args&&>(args)...)), is_member_function_pointer_v> {
 			return (_invoker::get(static_cast<Arg&&>(arg)).*fun)(static_cast<Args&&>(args)...);
 		}
 
-		template<type_if<int, is_member_object_pointer_v, sizeof...(Args) == 0> = 0>
-		constexpr auto operator()(R Base::* obj, Arg&& arg) noexcept
-			-> decltype(_invoker::get(static_cast<Arg&&>(arg)).*obj) {
+		constexpr auto operator()(R Base::* obj, Arg&& arg) const noexcept
+			-> type_if<decltype(_invoker::get(static_cast<Arg&&>(arg)).*obj), is_member_object_pointer_v, sizeof...(Args) == 0> {
 			return _invoker::get(static_cast<Arg&&>(arg)).*obj;
 		}
 	};
@@ -71,8 +66,7 @@ public:
 		return _invoker<F, Args...>{}(static_cast<F&&>(f), static_cast<Args&&>(args)...);
 	}
 
-	struct _invoke
-	{
+	struct _invoke {
 		template<class F, class... Args> constexpr invoke_result_t<F, Args...> operator()(F&& f, Args&&... args) const noexcept(nothrow_invocable_v<F, Args...>) {
 			return _invoker<F, Args...>{}(static_cast<F&&>(f), static_cast<Args&&>(args)...);
 		}
@@ -81,8 +75,7 @@ public:
 	constexpr _INLINE_VAR static _invoke invoke2{};
 
 protected:
-	template<class R, class B, class T> struct _member_ptr
-	{
+	template<class R, class B, class T> struct _member_ptr {
 		using P = R B::*;
 		constexpr _INLINE_VAR static bool is_member_function_pointer_v = std::is_member_function_pointer<P>::value;
 		constexpr _INLINE_VAR static bool is_member_object_pointer_v = std::is_member_object_pointer<P>::value;
@@ -105,23 +98,17 @@ protected:
 
 public:
 	template<class R, class B, class O>
-	constexpr static type_if<_member_ptr<R, B, remove_ref_t<O>>, is_base_of_v<B, remove_ref_t<O>>>
-		member_ptr(R B::* mem_ptr, O&& o) noexcept
-	{
+	constexpr static type_if<_member_ptr<R, B, remove_ref_t<O>>, is_base_of_v<B, remove_ref_t<O>>> member_ptr(R B::* mem_ptr, O&& o) noexcept {
 		return { mem_ptr, static_cast<O&&>(o) };
 	}
 
 	template<class R, class B, class P>
-	constexpr static type_if<_member_ptr<R, B, remove_ref_t<decltype(*std::declval<P>())>>, is_base_of_v<B, remove_ref_t<decltype(*std::declval<P>())>>>
-		member_ptr(R B::* mem_ptr, P&& p) noexcept
-	{
+	constexpr static type_if<_member_ptr<R, B, remove_ref_t<decltype(*std::declval<P>())>>, is_base_of_v<B, remove_ref_t<decltype(*std::declval<P>())>>> member_ptr(R B::* mem_ptr, P&& p) noexcept {
 		return { mem_ptr, *static_cast<P&&>(p) };
 	}
 
 	template<class R, class B, class W>
-	constexpr static type_if<_member_ptr<R, B, remove_ref_t<decltype(std::declval<W>().get())>>, is_base_of_v<B, remove_ref_t<decltype(std::declval<W>().get())>>>
-		member_ptr(R B::* mem_ptr, W&& w) noexcept
-	{
+	constexpr static type_if<_member_ptr<R, B, remove_ref_t<decltype(std::declval<W>().get())>>, is_base_of_v<B, remove_ref_t<decltype(std::declval<W>().get())>>> member_ptr(R B::* mem_ptr, W&& w) noexcept {
 		return { mem_ptr, static_cast<W&&>(w).get() };
 	}
 

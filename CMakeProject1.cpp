@@ -7,6 +7,8 @@
 #include "front_linked_list.hpp"
 #include <forward_list>
 #include <set>
+#include <utility>
+#include <array>
 
 
 struct CMakeProject1
@@ -70,12 +72,12 @@ private:
 	int i = 13;
 };
 
-struct MyStruct : pair<MyClass, MyClass> {
-	using pair<MyClass, MyClass>::first;
-	using pair<MyClass, MyClass>::second;
+struct MyStruct : pair<MyClass const, MyClass> {
+	using pair<MyClass const, MyClass>::first;
+	using pair<MyClass const, MyClass>::second;
 
-	MyStruct() : pair<MyClass, MyClass>(pair<void, void>::dummy) {
-		new(&first) MyClass();
+	MyStruct() : pair<MyClass const, MyClass>(pair<void, void>::dummy) {
+		new(unconst(&first)) MyClass();
 	}
 };
 
@@ -99,6 +101,10 @@ int main()
 
 
 	optional<int> oi;
+
+	auto oico = oi.compare(4);
+	//std::cout << oico;
+	std::cout << std::endl;
 
 	bool bbb;
 
@@ -179,7 +185,13 @@ int main()
 		<< f[1] << std::endl
 		<< f[2] << std::endl;
 
+	array<float> ff(f.begin(), f.end());
+
+	iterators::find_if(f.begin(), f.end(), CMakeProject1::is_zero);
+
 	auto fff = arrays::map(f, CMakeProject1::pow, 4);
+
+	auto fco = ff <=> ff;
 
 	constexpr size_t arr_s = arrays::size<array<int, 5>>;
 
@@ -188,7 +200,7 @@ int main()
 	constexpr bool c222 = convertible_v<iterator<int const*>, iterator<int*>>;
 	constexpr bool c333 = convertible_v<iterator<int*>&, iterator<int const*>&&>;
 
-	//constexpr bool c22 = objects::is_ordering_v<std::strong_ordering>;
+	constexpr bool c22 = objects::is_ordering_v<std::strong_ordering>;
 
 	treenode.insert(1);
 	treenode.insert(2);
@@ -207,6 +219,8 @@ int main()
 
 	std::set<int> set;
 
+	set.begin();
+
 	treenode.foreach(container::inserter(set));
 
 	container::insert2(set, f);
@@ -220,7 +234,7 @@ int main()
 
 	std::forward_list<int> front{};
 
-	treenode.foreach(container::after_emplacer(front, front.before_begin()));
+	treenode.foreach(container::after_inserter(front, front.before_begin()));
 
 	auto f_insert_after = container::insert_after2(front, front.before_begin(), f);
 

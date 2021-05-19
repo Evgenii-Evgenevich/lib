@@ -14,8 +14,7 @@ namespace std
 
 template<class = void, size_t...> struct array;
 
-template<> struct array<void>
-{
+template<> struct array<void> {
 protected:
     static void _check_range() {
         std::_Xout_of_range("arrays::_check_range");
@@ -129,7 +128,7 @@ public:
         return { static_cast<Args&&>(args)... };
     }
 
-    template<class Array, class Mapper, class... Args, class T = type_if<util::invoke_result_t<Mapper, container::const_reference<Array>, Args...>, container::data_availability_v<Array>>>
+    template<class Array, class Mapper, class... Args, class T = util::invoke_result_t<Mapper, container::const_reference<Array>, Args...>>
     _NODISCARD static array<T, size<Array>> map(Array const& arr, Mapper&& mapper, Args&&... args) {
         return { _map{}, container::data(arr), mapper, static_cast<Args&&>(args)... };
     }
@@ -152,8 +151,7 @@ public:
 
 using arrays = array<void>;
 
-template<class T> struct array<T, 0>
-{
+template<class T> struct array<T, 0> {
     using value_type = T;
     using size_type = size_t;
     using difference_type = ptrdiff_t;
@@ -232,12 +230,10 @@ template<class T> struct array<T, 0>
     ~array() noexcept { objects::destroy(m_data); }
 
 protected:
-    union
-    {
+    union {
         char m_[sizeof T]{};
         T m_data[1];
     };
-
 };
 
 template<class T, size_t N> struct array<T, N>
@@ -470,18 +466,15 @@ template<class T, size_t N> struct array<T, N>
         return reversed;
     }
 
-    template<class Comp = default_comporator, class U = T, class R = util::invoke_result_t<Comp, T const&, U const&>>
-    _NODISCARD type_if<R, objects::is_ordering_v<R>> compare(array<U, N> const& other, Comp&& comp = Comp{}) const noexcept(util::nothrow_invocable_v<Comp, T const&, U const&>) {
+    template<class Comp = default_comporator, class U = T, class Ord = util::invoke_result_t<Comp, T const&, U const&>>
+    _NODISCARD type_if<Ord, objects::is_ordering_v<Ord>> compare(array<U, N> const& other, Comp&& comp = Comp{}) const noexcept(util::nothrow_invocable_v<Comp, T const&, U const&>) {
         auto i = this->_Unchecked_begin();
         auto j = other._Unchecked_begin();
-        R res = util::invoke(static_cast<Comp&&>(comp), *i, *j);
-        if (res != 0) return res;
-        ++i; ++j;
         for (auto const end = this->_Unchecked_end(); i != end; ++i, (void)++j) {
-            res = util::invoke(static_cast<Comp&&>(comp), *i, *j);
+            auto res = util::invoke(static_cast<Comp&&>(comp), *i, *j);
             if (res != 0) return res;
         }
-        return res;
+        return { 0 };
     }
 
     template<class Proc = std::function<void(reference)>>
@@ -567,8 +560,7 @@ namespace std
     }
 }
 
-template<class T, size_t N, size_t M> struct array<T, N, M> : array<array<T, M>, N>
-{
+template<class T, size_t N, size_t M> struct array<T, N, M> : array<array<T, M>, N> {
     static_assert(N != 0, "N == 0");
     static_assert(M != 0, "M == 0");
 
@@ -586,8 +578,7 @@ template<class T, size_t N, size_t M> struct array<T, N, M> : array<array<T, M>,
     }
 };
 
-template<class T, size_t N, size_t... M> struct array<T, N, M...> : array<array<T, M...>, N>
-{
+template<class T, size_t N, size_t... M> struct array<T, N, M...> : array<array<T, M...>, N> {
     static_assert(N != 0, "N == 0");
 
     using base = array<array<T, M...>, N>;
@@ -682,8 +673,8 @@ template<class T> struct array<T>
             if (m_elems) arrays::_copy_construct(m_elems, m_elems + size, data);
     }
 
-    template<class C, class V = container::value_type<C>, class Pred = std::function<bool(T const&, V const&)>>
-    _NODISCARD type_if<bool, container::sizeable_v<C>, container::iterable_v<C>, convertible_v<util::invoke_result_t<Pred, T const&, V const&>, bool>>
+    template<class C, class Pred = std::function<bool(T const&, container::const_reference<C>)>>
+    _NODISCARD type_if<bool, container::sizeable_v<C>, container::iterable_v<C>, convertible_v<util::invoke_result_t<Pred, T const&, container::const_reference<C>>, bool>>
         equal(C const& c, Pred&& pred) const {
         return size() == container::size(c) && std::equal(_Unchecked_begin(), _Unchecked_end(), container::begin(c), static_cast<Pred&&>(pred));
     }
@@ -822,13 +813,11 @@ protected:
     remove_const_t<T>* m_elems;
     size_type m_size;
 
-    template<bool construct> struct _bytes
-    {
+    template<bool construct> struct _bytes {
         char _[sizeof T];
     };
 
-    template<> struct _bytes<true>
-    {
+    template<> struct _bytes<true> {
         char _[sizeof T]{};
     };
 
@@ -846,8 +835,7 @@ protected:
 
     template<class... Args> static remove_const_t<T>* _n_copies(size_type const size, Args&&... args) {
         auto* const data = new _bytes<false>[size];
-        for (auto i = data, end = data + size; i != end; ++i)
-        {
+        for (auto i = data, end = data + size; i != end; ++i) {
             new(i) T(static_cast<Args&&>(args)...);
         }
         return (remove_const_t<T>*) data;
@@ -865,8 +853,7 @@ protected:
         delete[]((_bytes<true>*)ptr);
     }
 
-    template<class I, bool = iterators::random_iter_v<I>> struct _initial
-    {
+    template<class I, bool = iterators::random_iter_v<I>> struct _initial {
         remove_const_t<T>*& res_data;
         size_type& res_size;
         I iterator;
@@ -879,10 +866,8 @@ protected:
         void operator()() {
             auto const size = res_size;
             I cur = iterator;
-            if (cur == end)
-            {
-                if (size)
-                {
+            if (cur == end) {
+                if (size) {
                     res_data = _alloc(size);
                 }
                 return;
@@ -894,8 +879,7 @@ protected:
         }
     };
 
-    template<class I> struct _initial<I, true>
-    {
+    template<class I> struct _initial<I, true> {
         remove_const_t<T>*& res_data;
         size_type& res_size;
         I begin;
@@ -907,24 +891,20 @@ protected:
 
         void operator()() {
             res_size = end - begin;
-            if (res_size)
-            {
+            if (res_size) {
                 res_data = _alloc(res_size);
-                for (remove_const_t<T>* i = res_data; begin != end; ++i, (void)++begin)
-                {
+                for (remove_const_t<T>* i = res_data; begin != end; ++i, (void)++begin) {
                     new(i) T(*begin);
                 }
             }
         }
     };
 
-    template<class I> static void _init(remove_const_t<T>*& res_data, size_type& res_size, I begin, I end)
-    {
+    template<class I> static void _init(remove_const_t<T>*& res_data, size_type& res_size, I begin, I end) {
         _initial<I>{ res_data, res_size, begin, end }();
     }
 
-    template<class I, class Filter> struct _init_filtered
-    {
+    template<class I, class Filter> struct _init_filtered {
         remove_const_t<T>*& res_data;
         size_type& res_size;
         I iterator;
@@ -937,31 +917,26 @@ protected:
 
         void operator()() {
             auto const n = res_size;
-            if (iterator == end)
-            {
-                if (n)
-                {
+            if (iterator == end) {
+                if (n) {
                     res_data = _alloc(n);
                 }
                 return;
             }
             auto& value = *iterator;
             ++iterator;
-            if (filter(value))
-            {
+            if (util::invoke(filter, value)) {
                 ++res_size;
                 operator()();
                 new(res_data + n) T(value);
             }
-            else
-            {
+            else {
                 operator()();
             }
         }
     };
 
-    template<class I> struct _init_filtered<I, always_true> : _initial<I>
-    {
+    template<class I> struct _init_filtered<I, always_true> : _initial<I> {
         constexpr _init_filtered(remove_const_t<T>*& res_data, size_type& res_size, I iterator, I end, always_true&) noexcept
             : _initial<I>{ res_data, res_size, iterator, end } {
         }
@@ -969,8 +944,7 @@ protected:
         using _initial<I>::operator();
     };
 
-    template<class I> struct _init_filtered<I, always_false>
-    {
+    template<class I> struct _init_filtered<I, always_false> {
         constexpr _init_filtered(remove_const_t<T>*&, size_type&, I, I, always_false&) noexcept {}
         constexpr void operator()() noexcept {}
     };
@@ -986,7 +960,7 @@ protected:
 
 #if _HAS_CXX17
 
-template<class I> array(I, I)->array<remove_ref_t<decltype(*std::declval<I>())>>;
+template<class I> array(I, I)->array<iterators::value_type<I>>;
 
 template<class T> array(array<T> const&)->array<T>;
 
@@ -1004,34 +978,51 @@ namespace std
     }
 }
 
-template<class T, class U, size_t... N> constexpr auto operator==(array<T, N...> const& l, array<U, N...> const& r)
+template<class T, class U, size_t... N> _NODISCARD constexpr auto operator==(array<T, N...> const& l, array<U, N...> const& r)
 -> decltype(l.equal(r)) {
     return l.equal(r);
 }
 
-template<class T, class U, size_t N> constexpr auto operator==(array<T, N> const& l, U const(&r)[N])
+template<class T, class U, size_t N> _NODISCARD constexpr auto operator==(array<T, N> const& l, U const(&r)[N])
 -> decltype(l.equal(r)) {
     return l.equal(r);
 }
 
-template<class T, class U, size_t N> constexpr auto operator==(U const(&l)[N], array<T, N> const& r)
+template<class T, class U, size_t N> _NODISCARD constexpr auto operator==(U const(&l)[N], array<T, N> const& r)
 -> decltype(r.equal(l)) {
     return r.equal(l);
 }
 
-template<class T, class U, size_t... N> constexpr auto operator!=(array<T, N...> const& l, array<U, N...> const& r)
+template<class T, class U, size_t... N> _NODISCARD constexpr auto operator!=(array<T, N...> const& l, array<U, N...> const& r)
 -> decltype(!l.equal(r)) {
     return !l.equal(r);
 }
 
-template<class T, class U, size_t N> constexpr auto operator!=(array<T, N> const& l, U const(&r)[N])
+template<class T, class U, size_t N> _NODISCARD constexpr auto operator!=(array<T, N> const& l, U const(&r)[N])
 -> decltype(!l.equal(r)) {
     return !l.equal(r);
 }
 
-template<class T, class U, size_t N> constexpr auto operator!=(U const(&l)[N], array<T, N> const& r)
+template<class T, class U, size_t N> _NODISCARD constexpr auto operator!=(U const(&l)[N], array<T, N> const& r)
 -> decltype(!r.equal(l)) {
     return !r.equal(l);
 }
+
+#if _HAS_CXX20
+
+struct comporator2;
+
+template<class L, class R, size_t N, class Ord = decltype(std::declval<L const&>() <=> std::declval<R const&>())>
+_NODISCARD constexpr auto operator<=>(array<L, N> const& l, array<R, N> const& r) noexcept(noexcept(std::declval<L const&>() <=> std::declval<R const&>()))
+-> decltype(l.compare(r, std::declval<Ord(L const&, R const&)>())) {
+    return l.compare(r, comporator2{});
+}
+
+template<class L, class R, class Ord = decltype(std::declval<L const&>() <=> std::declval<R const&>())>
+_NODISCARD constexpr auto operator<=>(array<L> const& l, array<R> const& r) noexcept(noexcept(std::declval<L const&>() <=> std::declval<R const&>()))
+-> decltype(iterators::compare(l._Unchecked_begin(), l._Unchecked_end(), r._Unchecked_begin(), r._Unchecked_end(), std::declval<Ord(L const&, R const&)>())) {
+    return iterators::compare(l._Unchecked_begin(), l._Unchecked_end(), r._Unchecked_begin(), r._Unchecked_end(), comporator2{});
+}
+#endif // _HAS_CXX20
 
 #endif // !__ARRAY_HPP

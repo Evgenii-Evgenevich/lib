@@ -7,6 +7,7 @@ namespace std
 }
 
 #include "util.hpp"
+#include "object.hpp"
 #include <iterator>
 
 template<class...> struct iterator;
@@ -22,6 +23,8 @@ template<> struct iterator<> {
 	template<class I> using reference = typename std::iterator_traits<remove_ref_t<I>>::reference;
 
 	template<class I> using object = conditional_value<std::is_pointer<I>, iterator<I>, I>;
+
+	template<class I> constexpr _INLINE_VAR static bool nothrow_inc_v = noexcept(++std::declval<I>());
 
 protected:
 	template<class I, class Category> static constexpr std::is_convertible<iterator_category<I>, Category> _tagged(int);
@@ -47,36 +50,32 @@ public:
 protected:
 	template<class I, bool = random_iter_v<I>> struct _foreach {
 		template<class Proc, class... Args>
-		constexpr size_t operator()(I begin, I end, Proc&& proc, Args&&... args) noexcept(util::nothrow_invocable_v<Proc, decltype(*begin), Args...>) {
+		constexpr auto operator()(I begin, I end, Proc& proc, Args&&... args) const noexcept(util::nothrow_invocable_v<Proc, decltype(*begin), Args...> && noexcept(*begin))
+			-> type_if<size_t, util::invocable_v<Proc, decltype(*begin), Args...>> {
 			size_t const res = end - begin;
 			for (I i = begin; i != end; ++i) {
-				util::invoke(static_cast<Proc&&>(proc), *i, static_cast<Args&&>(args)...);
+				util::invoke(proc, *i, static_cast<Args&&>(args)...);
 			}
 			return res;
 		}
 	};
 	template<class I> struct _foreach<I, /*random_iter_v=*/false> {
 		template<class Proc, class... Args>
-		constexpr size_t operator()(I begin, I end, Proc&& proc, Args&&... args) noexcept(util::nothrow_invocable_v<Proc, decltype(*begin), Args...>) {
+		constexpr auto operator()(I begin, I end, Proc& proc, Args&&... args) const noexcept(util::nothrow_invocable_v<Proc, decltype(*begin), Args...> && noexcept(*begin))
+			->type_if<size_t, util::invocable_v<Proc, decltype(*begin), Args...>> {
 			size_t res = 0;
 			for (I i = begin; i != end; ++i, (void)++res) {
-				util::invoke(static_cast<Proc&&>(proc), *i, static_cast<Args&&>(args)...);
+				util::invoke(proc, *i, static_cast<Args&&>(args)...);
 			}
 			return res;
 		}
 	};
 
 public:
-	template<class I, class... Args, class Proc = std::function<void(reference<I>, Args...)>>
-	constexpr static auto foreach(I begin, I end, Proc&& proc, Args&&... args) noexcept(util::nothrow_invocable_v<Proc, decltype(*begin), Args...>)
-		-> type_if<size_t, util::invocable_v<Proc, decltype(*begin), Args...>> {
-		return _foreach<I>{}(begin, end, static_cast<Proc&&>(proc), static_cast<Args&&>(args)...);
-	}
-
-	template<class I, class Proc = std::function<void(reference<I>)>>
-	constexpr static auto foreach(I begin, I end, Proc&& proc) noexcept(util::nothrow_invocable_v<Proc, decltype(*begin)>)
-		-> type_if<size_t, util::invocable_v<Proc, decltype(*begin)>> {
-		return _foreach<I>{}(begin, end, static_cast<Proc&&>(proc));
+	template<class I, class... Args, class Proc = std::function<void(reference<I>, Args...)>, class Foreach = _foreach<I>>
+	constexpr static auto foreach(I begin, I end, Proc&& proc, Args&&... args) noexcept(noexcept(Foreach{}(begin, end, proc, static_cast<Args&&>(args)...)))
+		-> decltype(Foreach{}(begin, end, proc, static_cast<Args&&>(args)...)) {
+		return Foreach{}(begin, end, proc, static_cast<Args&&>(args)...);
 	}
 
 protected:
@@ -84,55 +83,53 @@ protected:
 
 	template<class I> struct _rforeach<I, /*bidi_iter_v=false && random_iter_v=false*/ 0> {
 		template<class Proc, class... Args>
-		constexpr size_t operator()(I i, I end, Proc&& proc, Args&&... args) noexcept(util::nothrow_invocable_v<Proc, decltype(*i), Args...>) {
+		constexpr auto operator()(I i, I end, Proc& proc, Args&&... args) const noexcept(util::nothrow_invocable_v<Proc, decltype(*i), Args...> && noexcept(*i))
+			-> type_if<size_t, util::invocable_v<Proc, decltype(*i), Args...>> {
 			I next = i; ++next;
-			size_t const res = next != end ? _rforeach::operator()(next, end, static_cast<Proc&&>(proc), static_cast<Args&&>(args)...) : 0;
-			util::invoke(static_cast<Proc&&>(proc), *i, static_cast<Args&&>(args)...);
+			size_t const res = next != end ? _rforeach::operator()(next, end, proc, static_cast<Args&&>(args)...) : 0;
+			util::invoke(proc, *i, static_cast<Args&&>(args)...);
 			return res + 1;
 		}
 	};
 	template<class I> struct _rforeach<I, /*bidi_iter_v=true && random_iter_v=false*/ 1> {
 		template<class Proc, class... Args>
-		constexpr size_t operator()(I begin, I end, Proc&& proc, Args&&... args) noexcept(util::nothrow_invocable_v<Proc, decltype(*begin), Args...>) {
+		constexpr auto operator()(I begin, I end, Proc& proc, Args&&... args) const noexcept(util::nothrow_invocable_v<Proc, decltype(*begin), Args...> && noexcept(*begin))
+			-> type_if<size_t, util::invocable_v<Proc, decltype(*begin), Args...>> {
 			size_t res = 0;
 			for (I i = end; i != begin; ++res) {
 				--i;
-				util::invoke(static_cast<Proc&&>(proc), *i, static_cast<Args&&>(args)...);
+				util::invoke(proc, *i, static_cast<Args&&>(args)...);
 			}
 			return res;
 		}
 	};
 	template<class I> struct _rforeach<I, /*bidi_iter_v=true && random_iter_v=true*/ 2> {
 		template<class Proc, class... Args>
-		constexpr size_t operator()(I begin, I end, Proc&& proc, Args&&... args) noexcept(util::nothrow_invocable_v<Proc, decltype(*begin), Args...>) {
+		constexpr auto operator()(I begin, I end, Proc& proc, Args&&... args) const noexcept(util::nothrow_invocable_v<Proc, decltype(*begin), Args...> && noexcept(*begin))
+			-> type_if<size_t, util::invocable_v<Proc, decltype(*begin), Args...>> {
 			size_t const res = end - begin;
 			for (I i = end; i != begin; ) {
 				--i;
-				util::invoke(static_cast<Proc&&>(proc), *i, static_cast<Args&&>(args)...);
+				util::invoke(proc, *i, static_cast<Args&&>(args)...);
 			}
 			return res;
 		}
 	};
 
 public:
-	template<class I, class... Args, class Proc = std::function<void(reference<I>, Args...)>>
-	constexpr static auto rforeach(I begin, I end, Proc&& proc, Args&&... args) noexcept(util::nothrow_invocable_v<Proc, decltype(*begin), Args...>)
-		-> type_if<size_t, util::invocable_v<Proc, decltype(*begin), Args...>> {
-		return _rforeach<I>{}(begin, end, static_cast<Proc&&>(proc), static_cast<Args&&>(args)...);
-	}
-
-	template<class I, class Proc = std::function<void(reference<I>)>>
-	constexpr static auto rforeach(I begin, I end, Proc&& proc) noexcept(util::nothrow_invocable_v<Proc, decltype(*begin)>)
-		-> type_if<size_t, util::invocable_v<Proc, decltype(*begin)>> {
-		return _rforeach<I>{}(begin, end, static_cast<Proc&&>(proc));
+	template<class I, class... Args, class Proc = std::function<void(reference<I>, Args...)>, class Rforeach = _rforeach<I>>
+	constexpr static auto rforeach(I begin, I end, Proc&& proc, Args&&... args) noexcept(noexcept(Rforeach{}(begin, end, proc, static_cast<Args&&>(args)...)))
+		-> decltype(Rforeach{}(begin, end, proc, static_cast<Args&&>(args)...)) {
+		return Rforeach{}(begin, end, proc, static_cast<Args&&>(args)...);
 	}
 
 protected:
 	template<class I> struct _find_if {
 		template<class Pred, class... Args>
-		constexpr I operator()(I begin, I end, Pred&& pred, Args&&... args) noexcept(util::nothrow_invocable_v<Pred, decltype(*begin), Args...>) {
+		constexpr auto operator()(I begin, I end, Pred& pred, Args&&... args) const noexcept(util::nothrow_invocable_v<Pred, decltype(*begin), Args...> && noexcept(*begin))
+			-> type_if<I, convertible_v<util::invoke_result_t<Pred, decltype(*begin), Args...>, bool>> {
 			for (I i = begin; i != end; ++i) {
-				if (util::invoke(static_cast<Pred&&>(pred), *i, static_cast<Args&&>(args)...)) {
+				if (util::invoke(pred, *i, static_cast<Args&&>(args)...)) {
 					return i;
 				}
 			}
@@ -141,20 +138,31 @@ protected:
 	};
 
 public:
-	template<class I, class... Args, class Pred = std::function<bool(reference<I>, Args...)>>
-	constexpr static auto find_if(I begin, I end, Pred&& pred, Args&&... args) noexcept(util::nothrow_invocable_v<Pred, decltype(*begin), Args...>)
-		-> type_if<I, convertible_v<util::invoke_result_t<Pred, decltype(*begin), Args...>, bool>> {
-		return _find_if<I>{}(begin, end, static_cast<Pred&&>(pred), static_cast<Args&&>(args)...);
-	}
-
-	template<class I, class Pred = std::function<bool(reference<I>)>>
-	constexpr static auto find_if(I begin, I end, Pred&& pred) noexcept(util::nothrow_invocable_v<Pred, decltype(*begin)>)
-		-> type_if<I, convertible_v<util::invoke_result_t<Pred, decltype(*begin)>, bool>> {
-		return _find_if<I>{}(begin, end, static_cast<Pred&&>(pred));
+	template<class I, class... Args, class Pred = std::function<bool(reference<I>, Args...)>, class Find = _find_if<I>>
+	constexpr static auto find_if(I begin, I end, Pred&& pred, Args&&... args) noexcept(noexcept(Find{}(begin, end, pred, static_cast<Args&&>(args)...)))
+		-> decltype(Find{}(begin, end, pred, static_cast<Args&&>(args)...)) {
+		return Find{}(begin, end, pred, static_cast<Args&&>(args)...);
 	}
 
 public:
-
+	template<class Comp = default_comporator, class L, class R, class Ord = util::invoke_result_t<Comp, reference<L>, reference<R>>>
+	constexpr static auto compare(L const l_begin, L const l_end, R const r_begin, R const r_end, Comp&& comp = Comp{})
+		noexcept(util::nothrow_invocable_v<Comp, decltype(*l_begin), decltype(*r_begin)> && noexcept(*l_begin) && noexcept(*r_begin))
+		-> type_if<util::invoke_result_t<Comp, decltype(*l_begin), decltype(*r_begin)>, objects::is_ordering_v<Ord>> {
+		auto l_i = l_begin;
+		auto r_i = r_begin;
+		for (; l_i != l_end && r_i != r_end; ++l_i, (void)++r_i) {
+			auto res = util::invoke(comp, *l_i, *r_i);
+			if (res != 0) return res;
+		}
+		if (r_i != r_end) {
+			return { -1 };
+		}
+		if (l_i != l_end) {
+			return { 1 };
+		}
+		return { 0 };
+	}
 };
 
 using iterators = iterator<>;
