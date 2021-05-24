@@ -4,6 +4,9 @@
 namespace std
 {
     template<class, size_t> class array;
+
+    template<class> struct tuple_size;
+    template<size_t, class> struct tuple_element;
 }
 
 #include "util.hpp"
@@ -558,6 +561,12 @@ namespace std
     ::type_if<T const&, (I < N)> get(::array<T, N> const& o) noexcept {
         return o[I];
     }
+
+    template<class T, size_t N>
+    struct tuple_size<::array<T, N>> : std::integral_constant<size_t, N> {};
+
+    template<size_t I, class T, size_t N>
+    struct tuple_element<I, ::array<T, N>> : std::enable_if<(I < N), T> {};
 }
 
 template<class T, size_t N, size_t M> struct array<T, N, M> : array<array<T, M>, N> {

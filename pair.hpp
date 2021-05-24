@@ -1,15 +1,16 @@
 #ifndef __PAIR_HPP
 #define __PAIR_HPP 1
 
-template<class First, class Second> struct pair;
+template<class = void, class = void> struct pair;
 template<class, size_t...> struct array;
 
 namespace std
 {
+	template<class> struct tuple_size;
+	template<size_t, class> struct tuple_element;
+
 	template<class...> class tuple;
-
 	template<class, class> struct pair;
-
 	template<class, size_t N> class array;
 }
 
@@ -33,17 +34,14 @@ protected:
 		using second_type = Second;
 
 		union {
-			char _dummy;
+			char _[sizeof(first_type) + sizeof(second_type)];
 			struct {
 				first_type first;
 				second_type second;
 			};
 		};
 
-		constexpr _base(_dummy_t) noexcept : _dummy() {}
-
-		_base(_base const&) = default;
-		_base(_base&&) = default;
+		constexpr _base(_dummy_t) noexcept : _{} {}
 
 		template<class Int = type_if<int, is_constructible_v<first_type>, is_constructible_v<second_type>>, Int = 0>
 		constexpr _base() noexcept(is_nothrow_constructible_v<first_type> && is_nothrow_constructible_v<second_type>)
@@ -51,8 +49,18 @@ protected:
 		}
 
 		template<class First, class Second, type_if<int, convertible_v<First&&, first_type>, convertible_v<Second&&, second_type>> = 0>
-		constexpr _base(First&& first, Second&& second) noexcept(is_nothrow_constructible_v<first_type, First&&> && is_nothrow_constructible_v<second_type, Second&&>)
+		constexpr _base(First&& first, Second&& second) noexcept(is_nothrow_constructible_v<first_type, First&&>&& is_nothrow_constructible_v<second_type, Second&&>)
 			: first(static_cast<First&&>(first)), second(static_cast<Second&&>(second)) {
+		}
+
+		template<class Int = type_if<int, is_copy_constructible_v<first_type>, is_copy_constructible_v<second_type>>, Int = 0>
+		constexpr _base(_base const& o) noexcept(is_nothrow_copy_constructible_v<first_type>&& is_nothrow_copy_constructible_v<second_type>)
+			: first(o.first), second(o.second) {
+		}
+
+		template<class Int = type_if<int, is_move_constructible_v<first_type>, is_move_constructible_v<second_type>>, Int = 0>
+		constexpr _base(_base&& o) noexcept(is_nothrow_move_constructible_v<first_type>&& is_nothrow_move_constructible_v<second_type>)
+			: first(static_cast<First&&>(o.first)), second(static_cast<Second&&>(o.second)) {
 		}
 
 		template<class First, class Second, type_if<int, convertible_v<First const&, first_type>, convertible_v<Second const&, second_type>> = 0>
@@ -66,13 +74,33 @@ protected:
 		}
 
 		template<class U, type_if<int, convertible_v<U const&, first_type>, convertible_v<U const&, second_type>> = 0>
-		constexpr _base(array<U, 2> const& arr) noexcept(is_nothrow_constructible_v<first_type, U const&> && is_nothrow_constructible_v<second_type, U const&>)
+		constexpr _base(array<U, 2> const& arr) noexcept(is_nothrow_constructible_v<first_type, U const&>&& is_nothrow_constructible_v<second_type, U const&>)
 			: first(std::get<0>(arr)), second(std::get<1>(arr)) {
 		}
 
 		template<class U, type_if<int, convertible_v<U&&, first_type>, convertible_v<U&&, second_type>> = 0>
-		constexpr _base(array<U, 2>&& arr) noexcept(is_nothrow_constructible_v<first_type, U&&> && is_nothrow_constructible_v<second_type, U&&>)
+		constexpr _base(array<U, 2>&& arr) noexcept(is_nothrow_constructible_v<first_type, U&&>&& is_nothrow_constructible_v<second_type, U&&>)
 			: first(static_cast<U&&>(std::get<0>(arr))), second(static_cast<U&&>(std::get<1>(arr))) {
+		}
+
+		template<class U, type_if<int, convertible_v<U const&, first_type>, convertible_v<U const&, second_type>> = 0>
+		constexpr _base(std::array<U, 2> const& arr) noexcept(is_nothrow_constructible_v<first_type, U const&>&& is_nothrow_constructible_v<second_type, U const&>)
+			: first(std::get<0>(arr)), second(std::get<1>(arr)) {
+		}
+
+		template<class U, type_if<int, convertible_v<U&&, first_type>, convertible_v<U&&, second_type>> = 0>
+		constexpr _base(std::array<U, 2>&& arr) noexcept(is_nothrow_constructible_v<first_type, U&&>&& is_nothrow_constructible_v<second_type, U&&>)
+			: first(static_cast<U&&>(std::get<0>(arr))), second(static_cast<U&&>(std::get<1>(arr))) {
+		}
+
+		template<class First, class Second, type_if<int, convertible_v<First const&, first_type>, convertible_v<Second const&, second_type>> = 0>
+		constexpr _base(std::pair<First, Second> const& o) noexcept(is_nothrow_constructible_v<first_type, First const&>&& is_nothrow_constructible_v<second_type, Second const&>)
+			: first(std::get<0>(o)), second(std::get<1>(o)) {
+		}
+
+		template<class First, class Second, type_if<int, convertible_v<First&&, first_type>, convertible_v<Second&&, second_type>> = 0>
+		constexpr _base(std::pair<First, Second>&& o) noexcept(is_nothrow_constructible_v<first_type, First&&>&& is_nothrow_constructible_v<second_type, Second&&>)
+			: first(static_cast<First&&>(std::get<0>(o))), second(static_cast<Second&&>(std::get<1>(o))) {
 		}
 
 		template<class First, class Second, type_if<int, convertible_v<First const&, first_type>, convertible_v<Second const&, second_type>> = 0>
@@ -111,7 +139,13 @@ protected:
 public:
 	constexpr _INLINE_VAR static _dummy_t dummy{};
 
+	template<class First, class Second>
+	constexpr pair<First, Second> of(First&& first, Second&& second) noexcept(is_nothrow_constructible_v<First, First&&>&& is_nothrow_constructible_v<Second, Second&&>) {
+		return { first, second };
+	}
 };
+
+using pairs = pair<>;
 
 template<class T> struct pair<T, T> : private pair<void, void>::_base<T, T> {
 	using first_type = T;
@@ -121,6 +155,20 @@ template<class T> struct pair<T, T> : private pair<void, void>::_base<T, T> {
 
 	using pair<void, void>::_base<first_type, second_type>::first;
 	using pair<void, void>::_base<first_type, second_type>::second;
+
+	template<class First, class Second, type_if<int, is_assignable_v<first_type, First const&>, is_assignable_v<second_type, Second const&>> = 0>
+	constexpr auto& operator=(pair<First, Second> const& o) noexcept(is_nothrow_assignable_v<first_type, First const&>&& is_nothrow_assignable_v<second_type, Second const&>) {
+		this->first = o.first;
+		this->second = o.second;
+		return *this;
+	}
+
+	template<class First, class Second, type_if<int, is_assignable_v<first_type, First&&>, is_assignable_v<second_type, Second&&>> = 0>
+	constexpr auto& operator=(pair<First, Second>&& o) noexcept(is_nothrow_assignable_v<first_type, First&&>&& is_nothrow_assignable_v<second_type, Second&&>) {
+		this->first = static_cast<first_type&&>(o.first);
+		this->second = static_cast<second_type&&>(o.second);
+		return *this;
+	}
 
 	constexpr void swap(pair& o) noexcept { util::swap_bytes(*this, o); }
 
@@ -159,6 +207,20 @@ template<class First, class Second> struct pair : private pair<void, void>::_bas
 	using pair<void, void>::_base<first_type, second_type>::first;
 	using pair<void, void>::_base<first_type, second_type>::second;
 
+	template<class First, class Second, type_if<int, is_assignable_v<first_type, First const&>, is_assignable_v<second_type, Second const&>> = 0>
+	constexpr auto& operator=(pair<First, Second> const& o) noexcept(is_nothrow_assignable_v<first_type, First const&>&& is_nothrow_assignable_v<second_type, Second const&>) {
+		this->first = o.first;
+		this->second = o.second;
+		return *this;
+	}
+
+	template<class First, class Second, type_if<int, is_assignable_v<first_type, First&&>, is_assignable_v<second_type, Second&&>> = 0>
+	constexpr auto& operator=(pair<First, Second>&& o) noexcept(is_nothrow_assignable_v<first_type, First&&>&& is_nothrow_assignable_v<second_type, Second&&>) {
+		this->first = static_cast<first_type&&>(o.first);
+		this->second = static_cast<second_type&&>(o.second);
+		return *this;
+	}
+
 	constexpr void swap(pair& o) noexcept { util::swap_bytes(*this, o); }
 
 	constexpr operator std::tuple<first_type, second_type>& () & noexcept { return reinterpret_cast<std::tuple<first_type, second_type>&>(*this); }
@@ -173,8 +235,18 @@ template<class First, class Second> struct pair : private pair<void, void>::_bas
 };
 
 #if _HAS_CXX17
-template<class First, class Second>
-pair(First const&, Second const&)->pair<First, Second>;
+template<class First, class Second> pair(First const&, Second const&)->pair<First, Second>;
+template<class First, class Second> pair(First&&, Second const&)->pair<First, Second>;
+template<class First, class Second> pair(First const&, Second&&)->pair<First, Second>;
+template<class First, class Second> pair(First&&, Second&&)->pair<First, Second>;
+template<class First, class Second> pair(std::reference_wrapper<First>, Second const&)->pair<First&, Second>;
+template<class First, class Second> pair(std::reference_wrapper<First>, Second&&)->pair<First&, Second>;
+template<class First, class Second> pair(First const&, std::reference_wrapper<Second>)->pair<First, Second&>;
+template<class First, class Second> pair(First&&, std::reference_wrapper<Second>)->pair<First, Second&>;
+template<class First, class Second> pair(std::reference_wrapper<First>, std::reference_wrapper<Second>)->pair<First&, Second&>;
+
+template<class T> pair(array<T, 2> const&)->pair<T, T>;
+template<class T> pair(array<T, 2>&&)->pair<T, T>;
 #endif // _HAS_CXX17
 
 template<class LFirst, class LSecond, class RFirst, class RSecond, class = decltype(std::declval<LFirst>() == std::declval<RFirst>()), class = decltype(std::declval<LSecond>() == std::declval<RSecond>())>
@@ -257,6 +329,19 @@ namespace std
 	constexpr Res&& get(::pair<_Ty1, Res>&& o) noexcept {
 		return static_cast<Res&&>(o.second);
 	}
+
+	template<class First, class Second>
+	struct tuple_size<::pair<First, Second>> : std::integral_constant<size_t, 2> {};
+
+	template<class First, class Second>
+	struct tuple_element<0, ::pair<First, Second>> {
+		using type = First;
+	};
+
+	template<class First, class Second>
+	struct tuple_element<1, ::pair<First, Second>> {
+		using type = Second;
+	};
 }
 
 #endif // !__PAIR_HPP

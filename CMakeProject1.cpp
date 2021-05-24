@@ -9,6 +9,8 @@
 #include <set>
 #include <utility>
 #include <array>
+#include <vector>
+#include <tuple>
 
 
 struct CMakeProject1
@@ -83,13 +85,17 @@ struct MyStruct : pair<MyClass const, MyClass> {
 
 int main()
 {
+	is_copy_assignable_v<pair<int , int >>;
+
 	{
 		auto q123 = { 1,2,3 };
 
 		container::foreach(q123, println);
 	}
 
-	pair<int, float> pipi{ pair<float, int>{ 3, 4 } };
+	pair<int, int> pipi{ pair<float, int>{ 3, 4 } };
+
+	auto& rpipi = (pipi = pair<float, int>{ 3, 4 });
 
 	MyStruct pp;
 
@@ -98,7 +104,6 @@ int main()
 	std::cout << " :1: " << ((int*)(&pp))[1];
 	std::cout << std::endl;
 	std::cout << std::endl;
-
 
 	optional<int> oi;
 
@@ -187,11 +192,15 @@ int main()
 
 	array<float> ff(f.begin(), f.end());
 
+	std::vector<float> v{ 2,5,6,8,9 };
+
+	container::push_back(13, v);
+
 	iterators::find_if(f.begin(), f.end(), CMakeProject1::is_zero);
 
 	auto fff = arrays::map(f, CMakeProject1::pow, 4);
 
-	auto fco = ff <=> ff;
+	//auto fco = ff <=> ff;
 
 	constexpr size_t arr_s = arrays::size<array<int, 5>>;
 
@@ -200,7 +209,7 @@ int main()
 	constexpr bool c222 = convertible_v<iterator<int const*>, iterator<int*>>;
 	constexpr bool c333 = convertible_v<iterator<int*>&, iterator<int const*>&&>;
 
-	constexpr bool c22 = objects::is_ordering_v<std::strong_ordering>;
+	//constexpr bool c22 = objects::is_ordering_v<std::strong_ordering>;
 
 	treenode.insert(1);
 	treenode.insert(2);
@@ -216,10 +225,9 @@ int main()
 	decltype(treenode)::remove(f9t.first);
 
 	decltype(treenode)::remove(treenode.find(1));
+	decltype(treenode)::remove(&treenode);
 
 	std::set<int> set;
-
-	set.begin();
 
 	treenode.foreach(container::inserter(set));
 
