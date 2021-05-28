@@ -1,9 +1,39 @@
 #ifndef __ARRAY_HPP
 #define __ARRAY_HPP 1
 
+template<class = void, size_t...> struct array;
+template<class, class> struct pair;
+
 namespace std
 {
     template<class, size_t> class array;
+
+    template<size_t I, class First, class Second>
+    constexpr ::type_if<First&, (I == 0)> get(::pair<First, Second>&) noexcept;
+    template<size_t I, class First, class Second>
+    constexpr ::type_if<First const&, (I == 0)> get(::pair<First, Second> const&) noexcept;
+    template<size_t I, class First, class Second>
+    constexpr ::type_if<First&&, (I == 0)> get(::pair<First, Second>&&) noexcept;
+    template<size_t I, class First, class Second>
+    constexpr ::type_if<First const&&, (I == 0)> get(::pair<First, Second> const&&) noexcept;
+
+    template<size_t I, class First, class Second>
+    constexpr ::type_if<Second&, (I == 1)> get(::pair<First, Second>&) noexcept;
+    template<size_t I, class First, class Second>
+    constexpr ::type_if<Second const&, (I == 1)> get(::pair<First, Second> const&) noexcept;
+    template<size_t I, class First, class Second>
+    constexpr ::type_if<Second&&, (I == 1)> get(::pair<First, Second>&&) noexcept;
+    template<size_t I, class First, class Second>
+    constexpr ::type_if<Second const&&, (I == 1)> get(::pair<First, Second> const&&) noexcept;
+
+    template<size_t I, class T, size_t N>
+    constexpr ::type_if<T&, (I < N)> get(::array<T, N>&) noexcept;
+    template<size_t I, class T, size_t N>
+    constexpr ::type_if<T const&, (I < N)> get(::array<T, N> const&) noexcept;
+    template<size_t I, class T, size_t N>
+    constexpr ::type_if<T&&, (I < N)> get(::array<T, N>&&) noexcept;
+    template<size_t I, class T, size_t N>
+    constexpr ::type_if<T const&&, (I < N)> get(::array<T, N> const&&) noexcept;
 
     template<class> struct tuple_size;
     template<size_t, class> struct tuple_element;
@@ -15,7 +45,7 @@ namespace std
 #include "container.hpp"
 #include "object.hpp"
 
-template<class = void, size_t...> struct array;
+using arrays = array<void>;
 
 template<> struct array<void> {
 protected:
@@ -109,8 +139,7 @@ protected:
 
     template<class C, class Proc, class... Args> constexpr static auto _foreach(C& c, Proc&& proc, Args&&... args) noexcept(util::nothrow_invocable_v<Proc, decltype(*c._Unchecked_begin()), Args...>)
         -> type_if<decltype(c.size()), util::invocable_v<Proc, decltype(*c._Unchecked_begin()), Args...>> {
-        for (auto i = c._Unchecked_begin(), end = c._Unchecked_end(); i != end; ++i)
-        {
+        for (auto i = c._Unchecked_begin(), end = c._Unchecked_end(); i != end; ++i) {
             util::invoke(static_cast<Proc&&>(proc), *i, static_cast<Args&&>(args)...);
         }
         return c.size();
@@ -118,8 +147,7 @@ protected:
 
     template<class C, class Proc, class... Args> constexpr static auto _rforeach(C& c, Proc&& proc, Args&&... args) noexcept(util::nothrow_invocable_v<Proc, decltype(*c._Unchecked_begin()), Args...>)
         -> type_if<decltype(c.size()), util::invocable_v<Proc, decltype(*c._Unchecked_begin()), Args...>> {
-        for (auto i = c._Unchecked_end(), rend = c._Unchecked_begin(); i != rend; )
-        {
+        for (auto i = c._Unchecked_end(), rend = c._Unchecked_begin(); i != rend; ) {
             --i;
             util::invoke(static_cast<Proc&&>(proc), *i, static_cast<Args&&>(args)...);
         }
@@ -129,6 +157,17 @@ protected:
 public:
     template<class... Args> _NODISCARD static array<common_type<Args...>, sizeof...(Args)> of(Args&&... args) noexcept(nothrow_args_construct<common_type<Args...>, Args...>) {
         return { static_cast<Args&&>(args)... };
+    }
+
+    template<size_t... Indecies, class Tuple, class T = common_type<typename std::tuple_element<Indecies, Tuple>::type...>>
+    _NODISCARD constexpr static type_if_value<array<T, sizeof...(Indecies)>, is_constructible_from_each_tuple_element<T, Tuple&, std::index_sequence<Indecies...>>>
+        from(Tuple& tuple, std::index_sequence<Indecies...> = {}) noexcept(arrays::nothrow_args_construct<T, lvalue_ref_t<typename std::tuple_element<Indecies, Tuple>::type>...>) {
+        return { std::get<Indecies>(tuple)... };
+    }
+
+    template<class Tuple, class Indecies = std::make_index_sequence<std::tuple_size<Tuple>::value>>
+    _NODISCARD constexpr static auto from(Tuple& tuple) noexcept(noexcept(from(tuple, Indecies{}))) -> decltype(from(tuple, Indecies{})) {
+        return from(tuple, Indecies{});
     }
 
     template<class Array, class Mapper, class... Args, class T = util::invoke_result_t<Mapper, container::const_reference<Array>, Args...>>
@@ -152,8 +191,6 @@ public:
     template<class, size_t...> friend struct array;
 };
 
-using arrays = array<void>;
-
 template<class T> struct array<T, 0> {
     using value_type = T;
     using size_type = size_t;
@@ -169,13 +206,13 @@ template<class T> struct array<T, 0> {
     using reverse_iterator = ::reverse_iterator<pointer>;
     using const_reverse_iterator = ::reverse_iterator<const_pointer>;
 
-    array() = default;
+    constexpr array() noexcept = default;
 
-    array(array const&) = default;
-    array& operator=(array const&) = default;
+    constexpr array(array const&) noexcept = default;
+    constexpr array& operator=(array const&) noexcept = default;
 
-    array(array&&) = default;
-    array& operator=(array&&) = default;
+    constexpr array(array&&) noexcept = default;
+    constexpr array& operator=(array&&) noexcept = default;
 
     template<class C, class Pred = std::function<bool(const_reference, container::const_reference<C>)>>
     _NODISCARD constexpr type_if<bool, container::sizeable_v<C>, convertible_v<util::invoke_result_t<Pred, const_reference, container::const_reference<C>>, bool>>
@@ -239,8 +276,7 @@ protected:
     };
 };
 
-template<class T, size_t N> struct array<T, N>
-{
+template<class T, size_t N> struct array<T, N> {
     using value_type = T;
     using size_type = size_t;
     using difference_type = ptrdiff_t;
@@ -553,13 +589,20 @@ template<class T, size_t N> array(array<T, N>&&)->array<T, N>;
 namespace std
 {
     template<size_t I, class T, size_t N>
-    ::type_if<T&, (I < N)> get(::array<T, N>& o) noexcept {
-        return o[I];
+    inline constexpr ::type_if<T&, (I < N)> get(::array<T, N>& arr) noexcept {
+        return arr[I];
     }
-
     template<size_t I, class T, size_t N>
-    ::type_if<T const&, (I < N)> get(::array<T, N> const& o) noexcept {
-        return o[I];
+    inline constexpr ::type_if<T const&, (I < N)> get(::array<T, N> const& arr) noexcept {
+        return arr[I];
+    }
+    template<size_t I, class T, size_t N>
+    inline constexpr ::type_if<T&&, (I < N)> get(::array<T, N>&& arr) noexcept {
+        return static_cast<T&&>(arr[I]);
+    }
+    template<size_t I, class T, size_t N>
+    inline constexpr ::type_if<T const&&, (I < N)> get(::array<T, N> const&& arr) noexcept {
+        return static_cast<T const&&>(arr[I]);
     }
 
     template<class T, size_t N>
@@ -604,8 +647,7 @@ template<class T, size_t N, size_t... M> struct array<T, N, M...> : array<array<
     }
 };
 
-template<class T> struct array<T>
-{
+template<class T> struct array<T> {
     using value_type = T;
     using size_type = size_t;
     using difference_type = ptrdiff_t;
@@ -620,9 +662,20 @@ template<class T> struct array<T>
     using reverse_iterator = ::reverse_iterator<pointer>;
     using const_reverse_iterator = ::reverse_iterator<const_pointer>;
 
-    template<class... Args> constexpr static type_if<array<T, sizeof...(Args)>, is_constructible_from_each_v<T, Args...>>
+    template<class... Args> _NODISCARD constexpr static type_if<array<T, sizeof...(Args)>, is_constructible_from_each_v<T, Args...>>
         of(Args&&... args) noexcept(arrays::nothrow_args_construct<T, Args...>) {
         return { static_cast<Args&&>(args)... };
+    }
+
+    template<size_t... Indecies, class Tuple>
+    _NODISCARD constexpr static type_if_value<array<T, sizeof...(Indecies)>, is_constructible_from_each_tuple_element<T, Tuple&, std::index_sequence<Indecies...>>>
+        from(Tuple& tuple, std::index_sequence<Indecies...>) noexcept(noexcept(of(std::get<Indecies>(tuple)...))) {
+        return { std::get<Indecies>(tuple)... };
+    }
+
+    template<class Tuple, class Indecies = std::make_index_sequence<std::tuple_size<Tuple>::value>>
+    _NODISCARD constexpr static auto from(Tuple& tuple) noexcept(noexcept(from(tuple, Indecies{}))) -> decltype(from(tuple, Indecies{})) {
+        return from(tuple, Indecies{});
     }
 
     template<class Int = type_if<int, is_constructible_v<T>>, Int = 0>
@@ -634,13 +687,13 @@ template<class T> struct array<T>
     }
 
     template<class I, type_if<int, iterators::fwd_iter_v<I>, is_constructible_v<T, decltype(*std::declval<I>())>> = 0>
-    array(I begin, I end) : array() {
-        array::_init(m_elems, m_size, begin, end);
+    array(I begin, I end)
+        : m_elems(nullptr), m_size(_init(m_elems, begin, end)) {
     }
 
     template<class I, class Filter, class U = decltype(*std::declval<I>()), type_if<int, iterators::fwd_iter_v<I>, convertible_v<util::invoke_result_t<Filter, U>, bool>, is_constructible_v<T, U>> = 0>
     array(I begin, I end, Filter&& filter)
-        : m_elems(nullptr), m_size(array::_filtered(m_elems, 0, begin, end, filter)) {
+        : m_elems(nullptr), m_size(_filtered(m_elems, begin, end, filter)) {
     }
 
     constexpr array(array&& other) noexcept : array(_move{}, other) {
@@ -909,8 +962,10 @@ protected:
         }
     };
 
-    template<class I> static void _init(remove_const_t<T>*& res_data, size_type& res_size, I begin, I end) {
+    template<class I> static size_type _init(remove_const_t<T>*& res_data, I begin, I end) {
+        size_type res_size = 0;
         _initial<I>{ res_data, res_size, begin, end }();
+        return res_size;
     }
 
     template<class I, class Filter> struct _init_filtered {
@@ -959,7 +1014,7 @@ protected:
     };
 
     template<class I, class Filter> static size_type _filtered(remove_const_t<T>*& res_data, I iterator, I end, Filter& filter) {
-        size_t res_size = 0;
+        size_type res_size = 0;
         _init_filtered<I, Filter>{ res_data, res_size, iterator, end, filter }();
         return res_size;
     }

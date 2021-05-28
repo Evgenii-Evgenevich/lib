@@ -7,15 +7,31 @@
 namespace std
 {
 	template<class R, class T>
-	type_if<R, convertible_v<T&&, R&&>> get(T&& o) noexcept
-	{
+	type_if<R, convertible_v<T&&, R&&>> get(T&& o) noexcept {
 		return static_cast<R&&>(o);
 	}
+
+	template<class> struct tuple_size;
+	template<size_t, class> struct tuple_element;
 }
 
 template<class T, class... Args> _INLINE_VAR constexpr bool is_constructible_v = std::is_constructible<T, Args...>::value;
 template<class T, class... Args> _INLINE_VAR constexpr bool is_trivially_constructible_v = std::is_trivially_constructible<T, Args...>::value;
 template<class T, class... Args> _INLINE_VAR constexpr bool is_nothrow_constructible_v = std::is_nothrow_constructible<T, Args...>::value;
+
+template<class T, class Tuple, class Indexes = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> _INLINE_VAR constexpr bool is_constructible_from_elements_v =
+is_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>;
+template<class T, class Tuple, class Indexes = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> _INLINE_VAR constexpr bool is_trivially_constructible_from_elements_v =
+is_trivially_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>;
+template<class T, class Tuple, class Indexes = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> _INLINE_VAR constexpr bool is_nothrow_constructible_from_elements_v =
+is_nothrow_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>;
+
+template<class T, class Tuple, size_t... Indexes> _INLINE_VAR constexpr bool is_constructible_from_elements_v<T, Tuple, std::index_sequence<Indexes...>> =
+is_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>;
+template<class T, class Tuple, size_t... Indexes> _INLINE_VAR constexpr bool is_trivially_constructible_from_elements_v<T, Tuple, std::index_sequence<Indexes...>> =
+is_trivially_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>;
+template<class T, class Tuple, size_t... Indexes> _INLINE_VAR constexpr bool is_nothrow_constructible_from_elements_v<T, Tuple, std::index_sequence<Indexes...>> =
+is_nothrow_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>;
 
 template<class T> _INLINE_VAR constexpr bool is_copy_constructible_v = std::is_copy_constructible<T>::value;
 template<class T> _INLINE_VAR constexpr bool is_nothrow_copy_constructible_v = std::is_nothrow_copy_constructible<T>::value;
@@ -49,8 +65,23 @@ template<class T> struct is_nothrow_copy_assignable : conditional<is_nothrow_cop
 template<class T> struct is_move_assignable : conditional<is_move_assignable_v<T>> {};
 template<class T> struct is_nothrow_move_assignable : conditional<is_nothrow_move_assignable_v<T>> {};
 
-struct equal_to
-{
+template<class T, class Tuple, class Indexes = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> struct is_constructible_from_tuple : false_type {};
+template<class T, class Tuple, size_t... Indexes> struct is_constructible_from_tuple<T, Tuple, std::index_sequence<Indexes...>> :
+	conditional<is_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>> {};
+
+template<class T, class Tuple, class Indexes = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> struct is_trivially_constructible_from_tuple : false_type {};
+template<class T, class Tuple, size_t... Indexes> struct is_trivially_constructible_from_tuple<T, Tuple, std::index_sequence<Indexes...>> :
+	conditional<is_trivially_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>> {};
+
+template<class T, class Tuple, class Indexes = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> struct is_nothrow_constructible_from_tuple : false_type {};
+template<class T, class Tuple, size_t... Indexes> struct is_nothrow_constructible_from_tuple<T, Tuple, std::index_sequence<Indexes...>> :
+	conditional<is_nothrow_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>> {};
+
+template<class T, class Tuple> _INLINE_VAR constexpr bool is_constructible_from_tuple_v = is_constructible_from_tuple<T, Tuple>::value;
+template<class T, class Tuple> _INLINE_VAR constexpr bool is_trivially_constructible_from_tuple_v = is_trivially_constructible_from_tuple<T, Tuple>::value;
+template<class T, class Tuple> _INLINE_VAR constexpr bool is_nothrow_constructible_from_tuple_v = is_nothrow_constructible_from_tuple<T, Tuple>::value;
+
+struct equal_to {
 	template<class L, class R>
 	constexpr auto operator()(L&& left, R&& right) const noexcept(noexcept(static_cast<L&&>(left) == static_cast<R&&>(right)))
 		-> decltype(static_cast<L&&>(left) == static_cast<R&&>(right)) {
@@ -59,8 +90,7 @@ struct equal_to
 	using is_transparent = int;
 };
 
-struct less
-{
+struct less {
 	template<class L, class R>
 	constexpr auto operator()(L&& left, R&& right) const noexcept(noexcept(static_cast<L&&>(left) < static_cast<R&&>(right)))
 		-> decltype(static_cast<L&&>(left) < static_cast<R&&>(right)) {
@@ -69,8 +99,7 @@ struct less
 	using is_transparent = int;
 };
 
-struct greater
-{
+struct greater {
 	template<class L, class R>
 	constexpr auto operator()(L&& left, R&& right) const noexcept(noexcept(static_cast<L&&>(left) > static_cast<R&&>(right)))
 		-> decltype(static_cast<L&&>(left) > static_cast<R&&>(right)) {
@@ -79,20 +108,16 @@ struct greater
 	using is_transparent = int;
 };
 
-struct always_false
-{
+struct always_false {
 	template<class... Args> constexpr bool operator()(Args&&...) const noexcept { return false; }
 };
 
-struct always_true
-{
+struct always_true {
 	template<class... Args> constexpr bool operator()(Args&&...) const noexcept { return true; }
 };
 
-struct objects
-{
-	struct _get
-	{
+struct objects {
+	struct _get {
 		template<class... Args> constexpr auto operator()(Args&&... args) noexcept(noexcept(std::get(static_cast<Args&&>(args)...)))
 			-> decltype(std::get(static_cast<Args&&>(args)...)) {
 			return std::get(static_cast<Args&&>(args)...);
@@ -130,24 +155,19 @@ protected:
 	template<class T, bool = std::is_trivially_destructible<T>::value> struct _destroy;
 	template<class T, bool = std::is_trivially_destructible<T>::value> struct _destroy_range;
 
-	template<class T, size_t N, bool Ignore> struct _destroy<T[N], Ignore> : private _destroy_range<T>
-	{
+	template<class T, size_t N, bool Ignore> struct _destroy<T[N], Ignore> : private _destroy_range<T> {
 		constexpr void operator()(T(&arr)[N]) const noexcept {
 			_destroy_range<T>::operator()(arr, arr + N);
 		}
 	};
-	template<class T> struct _destroy<T, true>
-	{
+	template<class T> struct _destroy<T, true> {
 		constexpr void operator()(T&) const noexcept {}
 	};
-	template<class T> struct _destroy<T, false>
-	{
-		template<bool = is_polymorphic_v<T>> struct _
-		{
+	template<class T> struct _destroy<T, false> {
+		template<bool = is_polymorphic_v<T>> struct _ {
 			T value;
 		};
-		template<> struct _<true>
-		{
+		template<> struct _<true> {
 			~_() noexcept {
 				if (polymorphic)
 					value.~T();
@@ -162,12 +182,10 @@ protected:
 		}
 	};
 
-	template<class T> struct _destroy_range<T, true>
-	{
+	template<class T> struct _destroy_range<T, true> {
 		constexpr void operator()(T*, T*) const noexcept {}
 	};
-	template<class T> struct _destroy_range<T, false> : private _destroy<T>
-	{
+	template<class T> struct _destroy_range<T, false> : private _destroy<T> {
 		constexpr void operator()(T* first, T* last) const noexcept {
 			for (; first != last; ++first)
 				_destroy<T>::operator()(*first);
@@ -205,13 +223,11 @@ public:
 
 struct default_comporator;
 
-struct _object
-{
+struct _object {
 	virtual ~_object() {}
 };
 
-template<class T> struct _value_object
-{
+template<class T> struct _value_object {
 	_value_object(_value_object const&) = default;
 	_value_object& operator=(_value_object const&) = default;
 	_value_object(_value_object&&) = default;

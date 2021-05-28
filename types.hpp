@@ -87,6 +87,8 @@ template<class T> constexpr remove_cv_t<T>& unconst(T& lref) noexcept
 	return const_cast<remove_cv_t<T>&>(lref);
 }
 
+template<class T> constexpr _INLINE_VAR bool lvalue_ref_v = std::is_lvalue_reference<T>::value;
+
 template<class T> constexpr _INLINE_VAR bool is_const_v = std::is_const<T>::value;
 
 template<class T> struct is_const : conditional<is_const_v<T>> {};

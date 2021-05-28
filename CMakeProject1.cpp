@@ -1,5 +1,6 @@
 ﻿#include "CMakeProject1.h"
 #include "util.hpp"
+#include "pair.hpp"
 #include "comporator.hpp"
 #include "array.hpp"
 #include "tree_node.hpp"
@@ -83,9 +84,17 @@ struct MyStruct : pair<MyClass const, MyClass> {
 	}
 };
 
+
 int main()
 {
-	is_copy_assignable_v<pair<int , int >>;
+
+	{
+		is_constructible_v<pair<int, float>, array<int, 2>>;
+		auto ar10 = std::array<float, 10>{11, 22, 33, 44, 55, 66, 77, 88, 99};
+		arrays::from<1, 2, 4, 5, 7>(ar10).foreach(println);
+	}
+
+	is_constructible_v<std::pair<int, std::vector<float>>, pair<int, std::vector<float>>>;
 
 	{
 		auto q123 = { 1,2,3 };
@@ -93,11 +102,21 @@ int main()
 		container::foreach(q123, println);
 	}
 
-	pair<int, int> pipi{ pair<float, int>{ 3, 4 } };
+	pair<int, int> pipi{ pair<float, int>{ pair<int, float>{ array<int, 2>{ pair<int, int>{ std::tuple<double, float>(5, 4) } } } } };
+
+	arrays::from(pipi);
+
+	is_constructible_from_each_tuple_element<int, std::array<float, 1>>::value;
+	
+	std::get<0>(pipi);
 
 	auto& rpipi = (pipi = pair<float, int>{ 3, 4 });
 
 	MyStruct pp;
+
+	pair<int, std::vector<float>> pivf{ std::forward_as_tuple(1), std::forward_as_tuple(1), std::index_sequence<0>{}, std::index_sequence<0>{} };
+
+	//int fff = std::forward_as_tuple(1);
 
 	std::cout << std::endl;
 	std::cout << " :0: " << ((int*)(&pp))[0];
