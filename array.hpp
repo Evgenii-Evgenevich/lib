@@ -104,12 +104,14 @@ protected:
         return dst;
     }
 
-    template<class T, class Arg> constexpr static void _args_construct(T* data, Arg&& arg) noexcept(is_nothrow_constructible_v<T, Arg&&>) {
-        new(data) T(static_cast<Arg&&>(arg));
+    template<class T, class Arg> constexpr static void _args_construct(T* data, Arg&& arg) noexcept(
+        noexcept(objects::contruct(data, static_cast<Arg&&>(arg)))) {
+        objects::contruct(data, static_cast<Arg&&>(arg));
     }
 
-    template<class T, class Arg, class... Args> constexpr static void _args_construct(T* data, Arg&& arg, Args&&... args) noexcept(is_nothrow_constructible_v<T, Arg&&> && noexcept(_args_construct(data, static_cast<Args&&>(args)...))) {
-        new(data) T(static_cast<Arg&&>(arg));
+    template<class T, class Arg, class... Args> constexpr static void _args_construct(T* data, Arg&& arg, Args&&... args) noexcept(
+        noexcept(objects::contruct(data, static_cast<Arg&&>(arg))) && noexcept(_args_construct(data, static_cast<Args&&>(args)...))) {
+        objects::contruct(data, static_cast<Arg&&>(arg));
         _args_construct(data + 1, static_cast<Args&&>(args)...);
     }
 
@@ -159,15 +161,21 @@ public:
         return { static_cast<Args&&>(args)... };
     }
 
-    template<size_t... Indecies, class Tuple, class T = common_type<typename std::tuple_element<Indecies, Tuple>::type...>>
-    _NODISCARD constexpr static type_if_value<array<T, sizeof...(Indecies)>, is_constructible_from_each_tuple_element<T, Tuple&, std::index_sequence<Indecies...>>>
-        from(Tuple& tuple, std::index_sequence<Indecies...> = {}) noexcept(arrays::nothrow_args_construct<T, lvalue_ref_t<typename std::tuple_element<Indecies, Tuple>::type>...>) {
-        return { std::get<Indecies>(tuple)... };
+    template<size_t... Indices, class Tuple, class T = common_type<tuple_element_t<Indices, Tuple>...>>
+    _NODISCARD constexpr static type_if_value<array<T, sizeof...(Indices)>, is_constructible_from_each_tuple_element<T, Tuple&, std::index_sequence<Indices...>>>
+        from(Tuple& tuple, std::index_sequence<Indices...> = {}) noexcept(arrays::nothrow_args_construct<T, tuple_element_t<Indices, Tuple>&...>) {
+        return { std::get<Indices>(tuple)... };
     }
 
-    template<class Tuple, class Indecies = std::make_index_sequence<std::tuple_size<Tuple>::value>>
-    _NODISCARD constexpr static auto from(Tuple& tuple) noexcept(noexcept(from(tuple, Indecies{}))) -> decltype(from(tuple, Indecies{})) {
-        return from(tuple, Indecies{});
+    template<size_t... Indices, class Tuple, class T = common_type<tuple_element_t<Indices, Tuple>...>>
+    _NODISCARD constexpr static type_if_value<array<T, sizeof...(Indices)>, is_constructible_from_each_tuple_element<T, Tuple&&, std::index_sequence<Indices...>>>
+        from(Tuple&& tuple, std::index_sequence<Indices...> = {}) noexcept(arrays::nothrow_args_construct<T, tuple_element_t<Indices, Tuple>&&...>) {
+        return { std::get<Indices>(static_cast<Tuple&&>(tuple))... };
+    }
+
+    template<class Tuple, class Indices = make_index_sequence<Tuple>>
+    _NODISCARD constexpr static auto from(Tuple&& tuple) noexcept(noexcept(from(static_cast<Tuple&&>(tuple), Indices{}))) -> decltype(from(static_cast<Tuple&&>(tuple), Indices{})) {
+        return from(static_cast<Tuple&&>(tuple), Indices{});
     }
 
     template<class Array, class Mapper, class... Args, class T = util::invoke_result_t<Mapper, container::const_reference<Array>, Args...>>
@@ -609,7 +617,22 @@ namespace std
     struct tuple_size<::array<T, N>> : std::integral_constant<size_t, N> {};
 
     template<size_t I, class T, size_t N>
-    struct tuple_element<I, ::array<T, N>> : std::enable_if<(I < N), T> {};
+    struct tuple_element<I, ::array<T, N>> : std::enable_if<(I < N), T> {
+        static_assert(I < N, "array index out of bounds");
+
+        constexpr T& operator()(::array<T, N>& arr) const noexcept {
+            return arr[I];
+        }
+        constexpr T const& operator()(::array<T, N> const& arr) const noexcept {
+            return arr[I];
+        }
+        constexpr T&& operator()(::array<T, N>&& arr) const noexcept {
+            return static_cast<T&&>(arr[I]);
+        }
+        constexpr T const&& operator()(::array<T, N> const&& arr) const noexcept {
+            return static_cast<T const&&>(arr[I]);
+        }
+    };
 }
 
 template<class T, size_t N, size_t M> struct array<T, N, M> : array<array<T, M>, N> {
@@ -667,15 +690,15 @@ template<class T> struct array<T> {
         return { static_cast<Args&&>(args)... };
     }
 
-    template<size_t... Indecies, class Tuple>
-    _NODISCARD constexpr static type_if_value<array<T, sizeof...(Indecies)>, is_constructible_from_each_tuple_element<T, Tuple&, std::index_sequence<Indecies...>>>
-        from(Tuple& tuple, std::index_sequence<Indecies...>) noexcept(noexcept(of(std::get<Indecies>(tuple)...))) {
-        return { std::get<Indecies>(tuple)... };
+    template<size_t... Indices, class Tuple>
+    _NODISCARD constexpr static type_if_value<array<T, sizeof...(Indices)>, is_constructible_from_each_tuple_element<T, Tuple&, std::index_sequence<Indices...>>>
+        from(Tuple& tuple, std::index_sequence<Indices...>) noexcept(noexcept(of(std::get<Indices>(tuple)...))) {
+        return { std::get<Indices>(tuple)... };
     }
 
-    template<class Tuple, class Indecies = std::make_index_sequence<std::tuple_size<Tuple>::value>>
-    _NODISCARD constexpr static auto from(Tuple& tuple) noexcept(noexcept(from(tuple, Indecies{}))) -> decltype(from(tuple, Indecies{})) {
-        return from(tuple, Indecies{});
+    template<class Tuple, class Indices = make_index_sequence<Tuple>>
+    _NODISCARD constexpr static auto from(Tuple& tuple) noexcept(noexcept(from(tuple, Indices{}))) -> decltype(from(tuple, Indices{})) {
+        return from(tuple, Indices{});
     }
 
     template<class Int = type_if<int, is_constructible_v<T>>, Int = 0>

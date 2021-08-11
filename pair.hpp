@@ -99,6 +99,16 @@ protected:
 			: first(static_cast<First&&>(o.first)), second(static_cast<Second&&>(o.second)) {
 		}
 
+		template<class Other, size_t... Indices, type_if<int, sizeof...(Indices) == 2> = 0>
+		constexpr _base(Other const& other, std::index_sequence<Indices...>) noexcept(is_nothrow_constructible_v<_base, typename std::tuple_element<Indices, Other>::type const&...>)
+			: _base(std::get<Indices>(other)...) {
+		}
+
+		template<class Other, size_t... Indices, type_if<int, sizeof...(Indices) == 2> = 0>
+		constexpr _base(Other&& other, std::index_sequence<Indices...>) noexcept(is_nothrow_constructible_v<_base, typename std::tuple_element<Indices, Other>::type...>)
+			: _base(std::get<Indices>(static_cast<Other&&>(other))...) {
+		}
+
 		template<class Other, class First = typename std::tuple_element<0, Other>::type, class Second = typename std::tuple_element<1, Other>::type,
 			type_if<int, (std::tuple_size<Other>::value == 2), convertible_v<First const&, first_type>, convertible_v<Second const&, second_type>> = 0>
 		constexpr _base(Other const& other) noexcept(is_nothrow_constructible_v<first_type, First const&>&& is_nothrow_constructible_v<second_type, Second const&>)
@@ -111,23 +121,44 @@ protected:
 			: first(static_cast<First&&>(std::get<0>(other))), second(static_cast<Second&&>(std::get<1>(other))) {
 		}
 
-		template<class First, class Second, size_t... Indexes1, size_t... Indexes2, 
-			type_if_value<int, is_constructible_from_tuple<first_type, First, std::index_sequence<Indexes1...>>, is_constructible_from_tuple<second_type, Second, std::index_sequence<Indexes2...>>> = 0>
-		constexpr _base(First&& first, Second&& second, std::index_sequence<Indexes1...>, std::index_sequence<Indexes2...>)
-			noexcept(all_value<is_nothrow_constructible_from_tuple<first_type, First, std::index_sequence<Indexes1...>>, is_nothrow_constructible_from_tuple<second_type, Second, std::index_sequence<Indexes2...>>>)
-			: first(std::get<Indexes1>(static_cast<First&&>(first))...), second(std::get<Indexes2>(static_cast<Second&&>(second))...) {
+		template<class First, class Second, size_t... Indices1, size_t... Indices2, 
+			type_if_value<int, is_constructible_from_tuple<first_type, First, std::index_sequence<Indices1...>>, is_constructible_from_tuple<second_type, Second, std::index_sequence<Indices2...>>> = 0>
+		constexpr _base(First&& first, Second&& second, std::index_sequence<Indices1...>, std::index_sequence<Indices2...>)
+			noexcept(all_value<is_nothrow_constructible_from_tuple<first_type, First, std::index_sequence<Indices1...>>, is_nothrow_constructible_from_tuple<second_type, Second, std::index_sequence<Indices2...>>>)
+			: first(std::get<Indices1>(static_cast<First&&>(first))...), second(std::get<Indices2>(static_cast<Second&&>(second))...) {
 		}
 
-		template<class First, class Second, class Indexes1 = std::make_index_sequence<std::tuple_size<remove_ref_t<First>>::value>, class Indexes2 = std::make_index_sequence<std::tuple_size<remove_ref_t<Second>>::value>,
-			type_if<int, !convertible_v<First&&, first_type>, !convertible_v<Second&&, second_type>> = 0>
-		constexpr _base(First&& first, Second&& second) noexcept(is_nothrow_constructible_v<_base, First&&, Second&&, Indexes1, Indexes2>)
-			: _base(static_cast<First&&>(first), static_cast<Second&&>(second), Indexes1{}, Indexes2{}) {
+		template<class First, class Second, type_if<int, convertible_v<Second&&, second_type>> = 0,
+			size_t... Indices1, type_if_value<int, is_constructible_from_tuple<first_type, First, std::index_sequence<Indices1...>>> = 0>
+		constexpr _base(First&& first, Second&& second, std::index_sequence<Indices1...>)
+			noexcept(all_value<is_nothrow_constructible_from_tuple<first_type, First, std::index_sequence<Indices1...>>, is_nothrow_constructible<second_type, Second&&>>)
+			: first(std::get<Indices1>(static_cast<First&&>(first))...), second(static_cast<Second&&>(second)) {
 		}
 
-		constexpr operator std::tuple<first_type, second_type>& () & noexcept { return reinterpret_cast<std::tuple<first_type, second_type>&>(*this); }
-		constexpr operator std::tuple<first_type, second_type> const& () const& noexcept { return reinterpret_cast<std::tuple<first_type, second_type> const&>(*this); }
-		constexpr operator std::tuple<first_type, second_type>&& () && noexcept { return reinterpret_cast<std::tuple<first_type, second_type>&&>(*this); }
-		constexpr operator std::tuple<first_type, second_type> const&& () const&& noexcept { return reinterpret_cast<std::tuple<first_type, second_type> const&&>(*this); }
+		template<class First, class Second, type_if<int, convertible_v<First&&, first_type>> = 0,
+			size_t... Indices2, type_if_value<int, is_constructible_from_tuple<second_type, Second, std::index_sequence<Indices2...>>> = 0>
+		constexpr _base(First&& first, Second&& second, std::index_sequence<Indices2...>)
+			noexcept(all_value<is_nothrow_constructible<first_type, First&&>, is_nothrow_constructible_from_tuple<second_type, Second, std::index_sequence<Indices2...>>>)
+			: first(static_cast<First&&>(first)), second(std::get<Indices2>(static_cast<Second&&>(second))...) {
+		}
+
+		template<class First, class Second, type_if<int, !convertible_v<First&&, first_type>, !convertible_v<Second&&, second_type>> = 0,
+			class Indices1 = make_index_sequence<First>, class Indices2 = make_index_sequence<Second>>
+		constexpr _base(First&& first, Second&& second) noexcept(is_nothrow_constructible_v<_base, First&&, Second&&, Indices1, Indices2>)
+			: _base(static_cast<First&&>(first), static_cast<Second&&>(second), Indices1{}, Indices2{}) {
+		}
+
+		template<class First, class Second, type_if<int, !convertible_v<First&&, first_type>, convertible_v<Second&&, second_type>> = 0,
+			class Indices1 = make_index_sequence<First>>
+		constexpr _base(First&& first, Second&& second) noexcept(is_nothrow_constructible_v<_base, First&&, Second&&, Indices1>)
+			: _base(static_cast<First&&>(first), static_cast<Second&&>(second), Indices1{}) {
+		}
+
+		template<class First, class Second, type_if<int, convertible_v<First&&, first_type>, !convertible_v<Second&&, second_type>> = 0,
+			class Indices2 = make_index_sequence<Second>>
+		constexpr _base(First&& first, Second&& second) noexcept(is_nothrow_constructible_v<_base, First&&, Second&&, Indices2>)
+			: _base(static_cast<First&&>(first), static_cast<Second&&>(second), Indices2{}) {
+		}
 
 		constexpr operator std::pair<first_type, second_type>& () & noexcept { return reinterpret_cast<std::pair<first_type, second_type>&>(*this); }
 		constexpr operator std::pair<first_type, second_type> const& () const& noexcept { return reinterpret_cast<std::pair<first_type, second_type> const&>(*this); }
@@ -156,11 +187,6 @@ protected:
 		constexpr _base(Other&& other) noexcept(is_nothrow_constructible_v<first_type, First&&>&& is_nothrow_constructible_v<second_type, Second&&>)
 			: first(static_cast<First&&>(std::get<0>(other))), second(static_cast<Second&&>(std::get<1>(other))) {
 		}
-
-		constexpr operator std::tuple<first_type, second_type>& () & noexcept { return reinterpret_cast<std::tuple<first_type, second_type>&>(*this); }
-		constexpr operator std::tuple<first_type, second_type> const& () const& noexcept { return reinterpret_cast<std::tuple<first_type, second_type> const&>(*this); }
-		constexpr operator std::tuple<first_type, second_type>&& () && noexcept { return reinterpret_cast<std::tuple<first_type, second_type>&&>(*this); }
-		constexpr operator std::tuple<first_type, second_type> const&& () const&& noexcept { return reinterpret_cast<std::tuple<first_type, second_type> const&&>(*this); }
 
 		constexpr operator std::pair<first_type, second_type>& () & noexcept { return reinterpret_cast<std::pair<first_type, second_type>&>(*this); }
 		constexpr operator std::pair<first_type, second_type> const& () const& noexcept { return reinterpret_cast<std::pair<first_type, second_type> const&>(*this); }

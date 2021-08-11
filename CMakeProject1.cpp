@@ -46,15 +46,12 @@ struct CMakeProject1
 
 _INLINE_VAR constexpr auto CMakeProject1_sum = &CMakeProject1::__sum;
 
-struct _println
-{
+constexpr _INLINE_VAR struct {
 	template<class V> constexpr auto operator()(V const& v) const noexcept(noexcept(std::cout << v << std::endl))
 		-> decltype(std::cout << v << std::endl) {
 		return std::cout << v << std::endl;
 	}
-};
-
-constexpr _INLINE_VAR _println println{};
+} println{};
 
 void gdsfs(CMakeProject1 const& i)
 {
@@ -85,6 +82,8 @@ struct MyStruct : pair<MyClass const, MyClass> {
 };
 
 
+
+
 int main()
 {
 
@@ -93,6 +92,7 @@ int main()
 		auto ar10 = std::array<float, 10>{11, 22, 33, 44, 55, 66, 77, 88, 99};
 		arrays::from<1, 2, 4, 5, 7>(ar10).foreach(println);
 	}
+
 
 	is_constructible_v<std::pair<int, std::vector<float>>, pair<int, std::vector<float>>>;
 
@@ -114,7 +114,7 @@ int main()
 
 	MyStruct pp;
 
-	pair<int, std::vector<float>> pivf{ std::forward_as_tuple(1), std::forward_as_tuple(1), std::index_sequence<0>{}, std::index_sequence<0>{} };
+	pair<int, std::vector<float>> pivf{ 1, std::forward_as_tuple(1), std::index_sequence<0>{} };
 
 	//int fff = std::forward_as_tuple(1);
 

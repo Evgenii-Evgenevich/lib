@@ -18,10 +18,10 @@ template<class T, class Arg> struct is_constructible_from_each<T, Arg> : conditi
 
 template<class T, class Arg, class... Args> constexpr _INLINE_VAR bool is_constructible_from_each_v = is_constructible_from_each<T, Arg, Args...>::value;
 
-template<class T, class Tuple, class = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> struct is_constructible_from_each_tuple_element : false_type {};
+template<class T, class Tuple, class = make_index_sequence<Tuple>> struct is_constructible_from_each_tuple_element : false_type {};
 template<class T, class Tuple, size_t I, size_t... Indices> struct is_constructible_from_each_tuple_element<T, Tuple, std::index_sequence<I, Indices...>> : conditional<lvalue_ref_v<Tuple>,
-    is_constructible_from_each<T, lvalue_ref_t<typename std::tuple_element<I, remove_ref_t<Tuple>>::type>, lvalue_ref_t<typename std::tuple_element<Indices, remove_ref_t<Tuple>>::type>...>,
-    is_constructible_from_each<T, rvalue_ref_t<typename std::tuple_element<I, remove_ref_t<Tuple>>::type>, rvalue_ref_t<typename std::tuple_element<Indices, remove_ref_t<Tuple>>::type>...>> {
+    is_constructible_from_each<T, tuple_element_t<I, Tuple>&, tuple_element_t<Indices, Tuple>&...>,
+    is_constructible_from_each<T, tuple_element_t<I, Tuple>&&, tuple_element_t<Indices, Tuple>&&...>> {
 };
 
 template<class T, class Tuple> constexpr _INLINE_VAR bool is_constructible_from_each_tuple_element_v = is_constructible_from_each_tuple_element<T, Tuple>::value;
@@ -31,10 +31,10 @@ template<class T, class Arg> struct is_assignable_from_each<T, Arg> : conditiona
 
 template<class T, class Arg, class... Args> constexpr _INLINE_VAR bool is_assignable_from_each_v = is_assignable_from_each<T, Arg, Args...>::value;
 
-template<class T, class Tuple, class = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> struct is_assignable_from_each_tuple_element : false_type {};
+template<class T, class Tuple, class = make_index_sequence<Tuple>> struct is_assignable_from_each_tuple_element : false_type {};
 template<class T, class Tuple, size_t I, size_t... Indices> struct is_assignable_from_each_tuple_element<T, Tuple, std::index_sequence<I, Indices...>> : conditional<lvalue_ref_v<Tuple>,
-    is_assignable_from_each<T, lvalue_ref_t<typename std::tuple_element<I, remove_ref_t<Tuple>>::type>, lvalue_ref_t<typename std::tuple_element<Indices, remove_ref_t<Tuple>>::type>...>,
-    is_assignable_from_each<T, rvalue_ref_t<typename std::tuple_element<I, remove_ref_t<Tuple>>::type>, rvalue_ref_t<typename std::tuple_element<Indices, remove_ref_t<Tuple>>::type>...>> {
+    is_assignable_from_each<T, tuple_element_t<I, Tuple>&, tuple_element_t<Indices, Tuple>&...>,
+    is_assignable_from_each<T, tuple_element_t<I, Tuple>&&, tuple_element_t<Indices, Tuple>&&...>> {
 };
 
 template<class T, class Tuple> constexpr _INLINE_VAR bool is_assignable_from_each_tuple_element_v = is_assignable_from_each_tuple_element<T, Tuple>::value;
@@ -44,14 +44,16 @@ template<class T, class Arg> constexpr _INLINE_VAR bool convertible_from_each_v<
 
 template<class T, class Arg, class... Args> struct convertible_from_each : conditional<convertible_from_each_v<T, Arg, Args...>> {};
 
-template<class T, class Tuple, class = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> struct convertible_from_each_tuple_element : false_type {};
+template<class T, class Tuple, class = make_index_sequence<Tuple>> struct convertible_from_each_tuple_element : false_type {};
 template<class T, class Tuple, size_t I, size_t... Indices> struct convertible_from_each_tuple_element<T, Tuple, std::index_sequence<I, Indices...>> : conditional<lvalue_ref_v<Tuple>,
-    convertible_from_each<T, lvalue_ref_t<typename std::tuple_element<I, remove_ref_t<Tuple>>::type>, lvalue_ref_t<typename std::tuple_element<Indices, remove_ref_t<Tuple>>::type>...>,
-    convertible_from_each<T, rvalue_ref_t<typename std::tuple_element<I, remove_ref_t<Tuple>>::type>, rvalue_ref_t<typename std::tuple_element<Indices, remove_ref_t<Tuple>>::type>...>> {
+    convertible_from_each<T, tuple_element_t<I, Tuple>&, tuple_element_t<Indices, Tuple>&...>,
+    convertible_from_each<T, tuple_element_t<I, Tuple>&&, tuple_element_t<Indices, Tuple>&&...>> {
 };
 
 template<class T, class Tuple> constexpr _INLINE_VAR bool convertible_from_each_tuple_element_v = convertible_from_each_tuple_element<T, Tuple>::value;
 
+template<class T, class Arg, class... Args> constexpr _INLINE_VAR bool object_convertible_from_each_v = object_convertible_from_each_v<T, Arg> && is_convertible_from_each_v<T, Args...>;
+template<class T, class Arg> constexpr _INLINE_VAR bool object_convertible_from_each_v<T, Arg> = convertible_v<Arg, T> || is_constructible_from_tuple_v<T, Arg>;
 
 struct container {
 protected:

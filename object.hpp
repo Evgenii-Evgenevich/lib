@@ -15,23 +15,21 @@ namespace std
 	template<size_t, class> struct tuple_element;
 }
 
+template<class Tuple> using make_index_sequence = std::make_index_sequence<std::tuple_size<::remove_ref_t<Tuple>>::value>;
+template<size_t I, class Tuple> using tuple_element_t = typename std::tuple_element<I, ::remove_ref_t<Tuple>>::type;
+
 template<class T, class... Args> _INLINE_VAR constexpr bool is_constructible_v = std::is_constructible<T, Args...>::value;
 template<class T, class... Args> _INLINE_VAR constexpr bool is_trivially_constructible_v = std::is_trivially_constructible<T, Args...>::value;
 template<class T, class... Args> _INLINE_VAR constexpr bool is_nothrow_constructible_v = std::is_nothrow_constructible<T, Args...>::value;
 
-template<class T, class Tuple, class Indexes = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> _INLINE_VAR constexpr bool is_constructible_from_elements_v =
-is_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>;
-template<class T, class Tuple, class Indexes = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> _INLINE_VAR constexpr bool is_trivially_constructible_from_elements_v =
-is_trivially_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>;
-template<class T, class Tuple, class Indexes = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> _INLINE_VAR constexpr bool is_nothrow_constructible_from_elements_v =
-is_nothrow_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>;
+template<class T, class Tuple, class Indices = make_index_sequence<Tuple>> _INLINE_VAR constexpr bool is_constructible_from_elements_v = false;
+template<class T, class Tuple, size_t... Indices> _INLINE_VAR constexpr bool is_constructible_from_elements_v<T, Tuple, std::index_sequence<Indices...>> = is_constructible_v<T, tuple_element_t<Indices, Tuple>...>;
 
-template<class T, class Tuple, size_t... Indexes> _INLINE_VAR constexpr bool is_constructible_from_elements_v<T, Tuple, std::index_sequence<Indexes...>> =
-is_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>;
-template<class T, class Tuple, size_t... Indexes> _INLINE_VAR constexpr bool is_trivially_constructible_from_elements_v<T, Tuple, std::index_sequence<Indexes...>> =
-is_trivially_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>;
-template<class T, class Tuple, size_t... Indexes> _INLINE_VAR constexpr bool is_nothrow_constructible_from_elements_v<T, Tuple, std::index_sequence<Indexes...>> =
-is_nothrow_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>;
+template<class T, class Tuple, class Indices = make_index_sequence<Tuple>> _INLINE_VAR constexpr bool is_trivially_constructible_from_elements_v = false;
+template<class T, class Tuple, size_t... Indices> _INLINE_VAR constexpr bool is_trivially_constructible_from_elements_v<T, Tuple, std::index_sequence<Indices...>> = is_trivially_constructible_v<T, tuple_element_t<Indices, Tuple>...>;
+
+template<class T, class Tuple, class Indices = make_index_sequence<Tuple>> _INLINE_VAR constexpr bool is_nothrow_constructible_from_elements_v = false;
+template<class T, class Tuple, size_t... Indices> _INLINE_VAR constexpr bool is_nothrow_constructible_from_elements_v<T, Tuple, std::index_sequence<Indices...>> = is_nothrow_constructible_v<T, tuple_element_t<Indices, Tuple>...>;
 
 template<class T> _INLINE_VAR constexpr bool is_copy_constructible_v = std::is_copy_constructible<T>::value;
 template<class T> _INLINE_VAR constexpr bool is_nothrow_copy_constructible_v = std::is_nothrow_copy_constructible<T>::value;
@@ -65,17 +63,17 @@ template<class T> struct is_nothrow_copy_assignable : conditional<is_nothrow_cop
 template<class T> struct is_move_assignable : conditional<is_move_assignable_v<T>> {};
 template<class T> struct is_nothrow_move_assignable : conditional<is_nothrow_move_assignable_v<T>> {};
 
-template<class T, class Tuple, class Indexes = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> struct is_constructible_from_tuple : false_type {};
-template<class T, class Tuple, size_t... Indexes> struct is_constructible_from_tuple<T, Tuple, std::index_sequence<Indexes...>> :
-	conditional<is_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>> {};
+template<class T, class Tuple, class Indices = make_index_sequence<Tuple>> struct is_constructible_from_tuple : false_type {};
+template<class T, class Tuple, size_t... Indices> struct is_constructible_from_tuple<T, Tuple, std::index_sequence<Indices...>> :
+	conditional<is_constructible_v<T, tuple_element_t<Indices, Tuple>...>> {};
 
-template<class T, class Tuple, class Indexes = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> struct is_trivially_constructible_from_tuple : false_type {};
-template<class T, class Tuple, size_t... Indexes> struct is_trivially_constructible_from_tuple<T, Tuple, std::index_sequence<Indexes...>> :
-	conditional<is_trivially_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>> {};
+template<class T, class Tuple, class Indices = make_index_sequence<Tuple>> struct is_trivially_constructible_from_tuple : false_type {};
+template<class T, class Tuple, size_t... Indices> struct is_trivially_constructible_from_tuple<T, Tuple, std::index_sequence<Indices...>> :
+	conditional<is_trivially_constructible_v<T, tuple_element_t<Indices, Tuple>...>> {};
 
-template<class T, class Tuple, class Indexes = std::make_index_sequence<std::tuple_size<remove_ref_t<Tuple>>::value>> struct is_nothrow_constructible_from_tuple : false_type {};
-template<class T, class Tuple, size_t... Indexes> struct is_nothrow_constructible_from_tuple<T, Tuple, std::index_sequence<Indexes...>> :
-	conditional<is_nothrow_constructible_v<T, typename std::tuple_element<Indexes, remove_ref_t<Tuple>>::type...>> {};
+template<class T, class Tuple, class Indices = make_index_sequence<Tuple>> struct is_nothrow_constructible_from_tuple : false_type {};
+template<class T, class Tuple, size_t... Indices> struct is_nothrow_constructible_from_tuple<T, Tuple, std::index_sequence<Indices...>> :
+	conditional<is_nothrow_constructible_v<T, tuple_element_t<Indices, Tuple>...>> {};
 
 template<class T, class Tuple> _INLINE_VAR constexpr bool is_constructible_from_tuple_v = is_constructible_from_tuple<T, Tuple>::value;
 template<class T, class Tuple> _INLINE_VAR constexpr bool is_trivially_constructible_from_tuple_v = is_trivially_constructible_from_tuple<T, Tuple>::value;
@@ -117,13 +115,6 @@ struct always_true {
 };
 
 struct objects {
-	struct _get {
-		template<class... Args> constexpr auto operator()(Args&&... args) noexcept(noexcept(std::get(static_cast<Args&&>(args)...)))
-			-> decltype(std::get(static_cast<Args&&>(args)...)) {
-			return std::get(static_cast<Args&&>(args)...);
-		}
-	};
-
 	template<size_t Bytes> constexpr static void swap_bytes(void* l, void* r) noexcept {
 		if (l == r)
 			return;
@@ -150,6 +141,34 @@ public:
 	template<class T> constexpr _INLINE_VAR static bool is_class_v = std::is_class<T>::value;
 
 	template<class T> constexpr _INLINE_VAR static bool is_polymorphic_v = std::is_polymorphic<T>::value;
+
+public:
+	template<class T, class... Args> constexpr static type_if<remove_cv_t<T>*, is_constructible_v<T, Args...>> contruct(T* where, Args&&... args)
+		noexcept(is_nothrow_constructible_v<T, Args...>) {
+		remove_cv_t<T>* p = const_cast<remove_cv_t<T>*>(where);
+		new(p) T(static_cast<Args&&>(args)...);
+		return p;
+	}
+
+	template<size_t... Indices, class T, class Tuple> constexpr static auto contruct(T* where, Tuple&& tuple, std::index_sequence<Indices...> = {})
+		noexcept(noexcept(contruct(where, std::get<Indices>(static_cast<Tuple&&>(tuple))...)))
+		-> type_if<decltype(contruct(where, std::get<Indices>(static_cast<Tuple&&>(tuple))...)), !is_constructible_v<T, Tuple, std::index_sequence<Indices...>>> {
+		return contruct(where, std::get<Indices>(static_cast<Tuple&&>(tuple))...);
+	}
+
+	template<class T, class Tuple, class Indices = make_index_sequence<Tuple>>
+	constexpr static auto contruct(T* where, Tuple&& tuple) noexcept(noexcept(contruct(where, static_cast<Tuple&&>(tuple), Indices{})))
+		-> type_if<decltype(contruct(where, static_cast<Tuple&&>(tuple), Indices{})), !is_constructible_v<T, Tuple>> {
+		return contruct(where, static_cast<Tuple&&>(tuple), Indices{});
+	}
+
+	template<class T> struct _contruct {
+		template<class... Args> constexpr auto operator()(T* where, Args&&... args) const
+			noexcept(noexcept(objects::contruct(where, static_cast<Args&&>(args)...)))
+			-> decltype(objects::contruct(where, static_cast<Args&&>(args)...)) {
+			return objects::contruct(where, static_cast<Args&&>(args)...);
+		}
+	};
 
 protected:
 	template<class T, bool = std::is_trivially_destructible<T>::value> struct _destroy;
