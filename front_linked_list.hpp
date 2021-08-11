@@ -6,7 +6,16 @@
 #include "container.hpp"
 #include "singly_linked_node.hpp"
 
-template<class> struct front_linked_list;
+template<class = void> struct front_linked_list;
+
+using front_linked_lists = front_linked_list<>;
+
+template<> struct front_linked_list<void> {
+    template<class... Args> static auto of(Args&&... args)
+        -> decltype(front_linked_list<common_type<Args...>>{ static_cast<Args&&>(args)...}) {
+        return { static_cast<Args&&>(args)... };
+    }
+};
 
 template<class T>
 struct front_linked_list {
@@ -252,7 +261,7 @@ struct front_linked_list {
         return remove_if([&value](const_reference cur)->bool{ return value == cur; });
     }
 
-    void reverse() noexcept { m_before_first._reverse(); }
+    void reverse() noexcept { m_before_first.reverse_after(); }
 
     _NODISCARD front_linked_list reversed() const {
         front_linked_list reversed;

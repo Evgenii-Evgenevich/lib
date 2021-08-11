@@ -21,8 +21,7 @@ template<> struct singly_linked_node<void, void>
 
 	template<class Node, class Pred, class... Args>
 	inline static auto _remove_if(Node* prev, Pred&& pred, Args&&... args) noexcept(util::nothrow_invocable_v<Pred, decltype(null<Node const>->value()), Args...>)
-		-> type_if<size_t, convertible_v<decltype(prev->next()), Node*>, convertible_v<util::invoke_result_t<Pred, decltype(null<Node const>->value()), Args...>, bool>, sfinae_v<decltype(prev->unlink_next())>>
-	{
+		-> type_if<size_t, convertible_v<decltype(prev->next()), Node*>, convertible_v<util::invoke_result_t<Pred, decltype(null<Node const>->value()), Args...>, bool>, sfinae_v<decltype(prev->unlink_next())>> {
 		size_t removed = 0;
 		for (Node* i = prev->next(); i != nullptr; ) {
 			if (util::invoke(static_cast<Pred&&>(pred), i->value(), static_cast<Args&&>(args)...)) {
@@ -39,8 +38,7 @@ template<> struct singly_linked_node<void, void>
 
 	template<class Node, class Pred, class... Args>
 	_NODISCARD inline static auto _find_if(Node const* node, Pred&& pred, Args&&... args) noexcept(util::nothrow_invocable_v<Pred, decltype(node->value()), Args...>)
-		-> type_if<Node*, convertible_v<decltype(node->next()), Node const*>, convertible_v<util::invoke_result_t<Pred, decltype(node->value()), Args...>, bool>>
-	{
+		-> type_if<Node*, convertible_v<decltype(node->next()), Node const*>, convertible_v<util::invoke_result_t<Pred, decltype(node->value()), Args...>, bool>> {
 		for (; node != nullptr; node = node->next()) {
 			if (util::invoke(static_cast<Pred&&>(pred), node->value(), static_cast<Args&&>(args)...)) {
 				return const_cast<Node*>(node);
@@ -51,8 +49,7 @@ template<> struct singly_linked_node<void, void>
 
 	template<class Node, class Pred, class... Args>
 	_NODISCARD inline static auto _find_next_returning_prev(/*notnull*/ Node const* prev, Pred&& pred, Args&&... args) noexcept(util::nothrow_invocable_v<Pred, decltype(prev->value()), Args...>)
-		-> type_if<Node*, convertible_v<decltype(prev->next()), Node const*>, convertible_v<util::invoke_result_t<Pred, decltype(prev->value()), Args...>, bool>>
-	{
+		-> type_if<Node*, convertible_v<decltype(prev->next()), Node const*>, convertible_v<util::invoke_result_t<Pred, decltype(prev->value()), Args...>, bool>> {
 		for (Node const* node = prev->next(); node != nullptr; prev = node, node = node->next()) {
 			if (util::invoke(static_cast<Pred&&>(pred), node->value(), static_cast<Args&&>(args)...)) {
 				return const_cast<Node*>(prev);
@@ -105,7 +102,7 @@ template<class Derived> struct singly_linked_node<void, Derived> :
 		return m_next;
 	}
 
-	void _reverse() noexcept {
+	void reverse_after() noexcept {
 		nodeptr cur = m_next;
 		if (cur == nullptr) return;
 		for (nodeptr prev{}, next{}; ; prev = cur, (void)cur = next) {
